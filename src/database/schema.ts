@@ -23,6 +23,7 @@ export const users = pgTable('users', {
   password: text('password').notNull(),
   role: userRoleEnum('role').default('CLIENT').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
+  refreshToken: text('refresh_token'),
 });
 
 export const organizations = pgTable('organizations', {
