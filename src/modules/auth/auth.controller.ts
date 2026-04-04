@@ -4,7 +4,7 @@ import { SignUpDto } from './dtos/signup.dto';
 import { SignInDto } from './dtos/signin.dto';
 import { AccessTokenGuard } from '../../guards/access-token.guard';
 import { GetCurrentUser } from '../../decorators/get-current-user.decorator';
-import { RefreshTokenDto } from './dtos/refresh-token.dto';
+import { RefreshTokenGuard } from '../../guards/refresh-token.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -26,8 +26,12 @@ export class AuthController {
     return this.authService.logout(userId);
   }
 
+  @UseGuards(RefreshTokenGuard)
   @Post('refresh')
-  refreshTokens(@Body() dto: RefreshTokenDto) {
-    return this.authService.refreshTokens(dto.userId, dto.refreshToken);
+  refreshTokens(
+    @GetCurrentUser('sub') userId: number,
+    @GetCurrentUser('refreshToken') refreshToken: string,
+  ) {
+    return this.authService.refreshTokens(userId, refreshToken);
   }
 }

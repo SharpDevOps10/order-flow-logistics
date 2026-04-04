@@ -1,15 +1,14 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { Request } from 'express'; // Імпортуємо стандартний тип Request
-import { JwtPayload } from '../modules/auth/strategies/jwt.strategy';
+import { Request } from 'express';
+import { JwtPayloadWithRt } from '../modules/auth/strategies/jwt.strategy';
 
 interface RequestWithUser extends Request {
-  user: JwtPayload;
+  user: JwtPayloadWithRt;
 }
 
 export const GetCurrentUser = createParamDecorator(
-  (data: keyof JwtPayload | undefined, context: ExecutionContext) => {
+  (data: keyof JwtPayloadWithRt | undefined, context: ExecutionContext) => {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
-
     const user = request.user;
 
     if (!data) return user;

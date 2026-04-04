@@ -9,6 +9,8 @@ export type JwtPayload = {
   role: string;
 };
 
+export type JwtPayloadWithRt = JwtPayload & { refreshToken: string };
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(configService: ConfigService) {
