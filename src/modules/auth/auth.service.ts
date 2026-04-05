@@ -13,6 +13,7 @@ import * as schema from '../../database/schema';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { SignUpDto } from './dtos/signup.dto';
 import { SignInDto } from './dtos/signin.dto';
+import { Role } from '../../common/enums/role.enum';
 
 @Injectable()
 export class AuthService {
@@ -38,7 +39,7 @@ export class AuthService {
         email: dto.email,
         password: hashedPassword,
         fullName: dto.fullName,
-        role: 'CLIENT',
+        role: dto.role || Role.CLIENT,
       })
       .returning();
 

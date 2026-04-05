@@ -8,12 +8,13 @@ import {
   pgEnum,
   decimal,
 } from 'drizzle-orm/pg-core';
+import { Role } from '../common/enums/role.enum';
 
 export const userRoleEnum = pgEnum('user_role', [
-  'ADMIN',
-  'CLIENT',
-  'SUPPLIER',
-  'COURIER',
+  Role.ADMIN,
+  Role.CLIENT,
+  Role.SUPPLIER,
+  Role.COURIER,
 ]);
 
 export const users = pgTable('users', {
@@ -21,7 +22,7 @@ export const users = pgTable('users', {
   fullName: varchar('full_name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull().unique(),
   password: text('password').notNull(),
-  role: userRoleEnum('role').default('CLIENT').notNull(),
+  role: userRoleEnum('role').default(Role.CLIENT).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
   refreshToken: text('refresh_token'),
 });
