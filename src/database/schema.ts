@@ -9,6 +9,13 @@ import {
   decimal,
 } from 'drizzle-orm/pg-core';
 import { Role } from '../common/enums/role.enum';
+import { OrderStatus } from '../common/enums/order-status.enum';
+
+export const orderStatusEnum = pgEnum('order_status', [
+  OrderStatus.PENDING,
+  OrderStatus.ACCEPTED,
+  OrderStatus.READY_FOR_DELIVERY,
+]);
 
 export const userRoleEnum = pgEnum('user_role', [
   Role.ADMIN,
@@ -45,7 +52,8 @@ export const orders = pgTable('orders', {
     .notNull(),
   courierId: integer('courier_id').references(() => users.id),
 
-  status: text('status').default('PENDING').notNull(),
+  status: orderStatusEnum('status').default(OrderStatus.PENDING).notNull(),
+  totalAmount: integer('total_amount').notNull().default(0),
 
   deliveryAddress: text('delivery_address').notNull(),
   lat: decimal('lat', { precision: 10, scale: 7 }),
@@ -70,7 +78,9 @@ export const orderItems = pgTable('order_items', {
   orderId: integer('order_id')
     .references(() => orders.id)
     .notNull(),
-  productName: varchar('product_name', { length: 255 }).notNull(),
+  productId: integer('product_id')
+    .references(() => products.id)
+    .notNull(),
   quantity: integer('quantity').notNull().default(1),
-  price: decimal('price', { precision: 10, scale: 2 }),
+  priceAtPurchase: integer('price_at_purchase').notNull(),
 });
