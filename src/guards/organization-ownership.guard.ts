@@ -20,7 +20,7 @@ export class OrganizationOwnershipGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<RequestWithUser>();
     const userId = request.user.sub;
 
-    const orgIdParam = request.params.id;
+    const orgIdParam = request.params.id ?? request.params.orgId;
 
     if (!orgIdParam) return true;
 

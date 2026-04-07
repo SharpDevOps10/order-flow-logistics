@@ -54,6 +54,17 @@ export const orders = pgTable('orders', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+export const products = pgTable('products', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  price: integer('price').notNull(),
+  organizationId: integer('organization_id')
+    .references(() => organizations.id)
+    .notNull(),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 export const orderItems = pgTable('order_items', {
   id: serial('id').primaryKey(),
   orderId: integer('order_id')
