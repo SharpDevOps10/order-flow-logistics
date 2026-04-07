@@ -1,4 +1,5 @@
-import { IsString, IsOptional } from 'class-validator';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class UpdateOrganizationDto {
   @IsString()
@@ -8,4 +9,14 @@ export class UpdateOrganizationDto {
   @IsString()
   @IsOptional()
   region?: string;
+
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  lat?: number;
+
+  @IsNumber()
+  @IsOptional()
+  @Type(() => Number)
+  lng?: number;
 }

@@ -24,6 +24,8 @@ export class OrganizationsService {
       .values({
         name: dto.name,
         region: dto.region,
+        lat: dto.lat?.toString(),
+        lng: dto.lng?.toString(),
         ownerId: ownerId,
         isApproved: 0,
       })
@@ -47,14 +49,14 @@ export class OrganizationsService {
   }
 
   async getMyOrganizations(ownerId: number) {
-    return await this.db
+    return this.db
       .select()
       .from(schema.organizations)
       .where(eq(schema.organizations.ownerId, ownerId));
   }
 
   async getPending() {
-    return await this.db
+    return this.db
       .select()
       .from(schema.organizations)
       .where(eq(schema.organizations.isApproved, 0));
@@ -76,9 +78,16 @@ export class OrganizationsService {
       throw new BadRequestException('No data provided for update');
     }
 
+    const { lat, lng, ...rest } = dto;
+    const updateData = {
+      ...rest,
+      ...(lat !== undefined && { lat: lat.toString() }),
+      ...(lng !== undefined && { lng: lng.toString() }),
+    };
+
     const [updatedOrg] = await this.db
       .update(schema.organizations)
-      .set(dto)
+      .set(updateData)
       .where(eq(schema.organizations.id, id))
       .returning();
 
@@ -87,7 +96,7 @@ export class OrganizationsService {
   }
 
   async getApproved() {
-    return await this.db
+    return this.db
       .select()
       .from(schema.organizations)
       .where(eq(schema.organizations.isApproved, 1));

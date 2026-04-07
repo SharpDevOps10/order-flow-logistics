@@ -11,10 +11,12 @@ import * as schema from '../../database/schema';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { CreateOrderDto } from './dtos/create-order.dto';
 import { UpdateOrderStatusDto } from './dtos/update-order-status.dto';
+import { AssignCourierDto } from './dtos/assign-courier.dto';
 import {
   ORDER_STATUS_TRANSITIONS,
   OrderStatus,
 } from '../../common/enums/order-status.enum';
+import { Role } from '../../common/enums/role.enum';
 
 @Injectable()
 export class OrdersService {
@@ -138,5 +140,64 @@ export class OrdersService {
       .returning();
 
     return updated;
+  }
+
+  async assignCourier(
+    orderId: number,
+    supplierId: number,
+    dto: AssignCourierDto,
+  ) {
+    const [row] = await this.db
+      .select()
+      .from(schema.orders)
+      .innerJoin(
+        schema.organizations,
+        eq(schema.orders.organizationId, schema.organizations.id),
+      )
+      .where(
+        and(
+          eq(schema.orders.id, orderId),
+          eq(schema.organizations.ownerId, supplierId),
+        ),
+      );
+
+    if (!row) {
+      throw new NotFoundException('Order not found or access denied');
+    }
+
+    if (row.orders.status !== OrderStatus.READY_FOR_DELIVERY) {
+      throw new BadRequestException(
+        'Courier can only be assigned to orders with status READY_FOR_DELIVERY',
+      );
+    }
+
+    const [courier] = await this.db
+      .select({ id: schema.users.id, role: schema.users.role })
+      .from(schema.users)
+      .where(eq(schema.users.id, dto.courierId));
+
+    if (!courier || courier.role !== Role.COURIER) {
+      throw new BadRequestException('User is not a courier');
+    }
+
+    const [updated] = await this.db
+      .update(schema.orders)
+      .set({ courierId: dto.courierId })
+      .where(eq(schema.orders.id, orderId))
+      .returning();
+
+    return updated;
+  }
+
+  async findCourierOrders(courierId: number) {
+    return this.db
+      .select()
+      .from(schema.orders)
+      .where(
+        and(
+          eq(schema.orders.courierId, courierId),
+          eq(schema.orders.status, OrderStatus.READY_FOR_DELIVERY),
+        ),
+      );
   }
 }

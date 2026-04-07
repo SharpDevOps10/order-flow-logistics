@@ -39,6 +39,8 @@ export const organizations = pgTable('organizations', {
   name: varchar('name', { length: 255 }).notNull(),
   ownerId: integer('owner_id').references(() => users.id),
   region: text('region'),
+  lat: decimal('lat', { precision: 10, scale: 7 }),
+  lng: decimal('lng', { precision: 10, scale: 7 }),
   isApproved: integer('is_approved').default(0),
 });
 
