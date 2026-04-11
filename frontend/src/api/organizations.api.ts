@@ -26,12 +26,12 @@ export const OrganizationsApi = {
     return data
   },
 
-  update: async (id: string, dto: UpdateOrganizationDto): Promise<Organization> => {
+  update: async (id: number, dto: UpdateOrganizationDto): Promise<Organization> => {
     const { data } = await axiosInstance.patch<Organization>(`/organizations/${id}`, dto)
     return data
   },
 
-  approve: async (id: string): Promise<Organization> => {
+  approve: async (id: number): Promise<Organization> => {
     const { data } = await axiosInstance.patch<Organization>(`/organizations/${id}/approve`)
     return data
   },

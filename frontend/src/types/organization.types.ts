@@ -1,17 +1,23 @@
 export interface Organization {
-  id: string
+  id: number
   name: string
-  description: string
-  address: string
-  isApproved: boolean
-  supplierId: string
-  createdAt: string
+  ownerId: number | null
+  region: string | null
+  lat: string | null
+  lng: string | null
+  isApproved: number
 }
 
 export interface CreateOrganizationDto {
   name: string
-  description: string
-  address: string
+  region?: string
+  lat?: number
+  lng?: number
 }
 
-export type UpdateOrganizationDto = Partial<CreateOrganizationDto>
+export interface UpdateOrganizationDto {
+  name?: string
+  region?: string
+  lat?: number
+  lng?: number
+}

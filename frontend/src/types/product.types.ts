@@ -1,16 +1,20 @@
 export interface Product {
-  id: string
+  id: number
   name: string
-  description: string
+  description: string | null
   price: number
-  organizationId: string
-  createdAt: string
+  organizationId: number
+  createdAt: string | null
 }
 
 export interface CreateProductDto {
   name: string
-  description: string
+  description?: string
   price: number
 }
 
-export type UpdateProductDto = Partial<CreateProductDto>
+export interface UpdateProductDto {
+  name?: string
+  description?: string
+  price?: number
+}

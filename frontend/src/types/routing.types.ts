@@ -1,17 +1,16 @@
-export enum WaypointType {
-  Pickup = 'PICKUP',
-  Delivery = 'DELIVERY',
-}
+export type WaypointType = 'PICKUP' | 'DELIVERY'
 
-export interface Waypoint {
+export interface RouteWaypoint {
   type: WaypointType
+  orderId: number | null
+  organizationId: number | null
+  address: string
   lat: number
   lng: number
-  address: string
-  orderId?: string
+  distanceFromPrevKm: number
 }
 
-export interface DeliveryRoute {
-  waypoints: Waypoint[]
+export interface OptimizedRoute {
   totalDistanceKm: number
+  waypoints: RouteWaypoint[]
 }

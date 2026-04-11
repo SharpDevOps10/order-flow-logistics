@@ -2,30 +2,47 @@ export enum OrderStatus {
   Pending = 'PENDING',
   Accepted = 'ACCEPTED',
   ReadyForDelivery = 'READY_FOR_DELIVERY',
-  InDelivery = 'IN_DELIVERY',
-  Delivered = 'DELIVERED',
 }
 
+// Matches backend schema.order_items
 export interface OrderItem {
-  productId: string
-  productName: string
+  id: number
+  orderId: number
+  productId: number
   quantity: number
-  price: number
+  priceAtPurchase: number
 }
 
 export interface Order {
-  id: string
+  id: number
+  clientId: number
+  organizationId: number
+  courierId: number | null
   status: OrderStatus
-  clientId: string
-  courierId: string | null
-  organizationId: string
+  totalAmount: number
   deliveryAddress: string
+  lat: string | null
+  lng: string | null
+  createdAt: string | null
+}
+
+export interface OrderWithItems extends Order {
   items: OrderItem[]
-  createdAt: string
+}
+
+export interface CreateOrderItemDto {
+  productId: number
+  quantity: number
 }
 
 export interface CreateOrderDto {
-  organizationId: string
+  organizationId: number
   deliveryAddress: string
-  items: Pick<OrderItem, 'productId' | 'quantity'>[]
+  lat?: string
+  lng?: string
+  items: CreateOrderItemDto[]
+}
+
+export interface AssignCourierDto {
+  courierId: number
 }
