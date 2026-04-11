@@ -2,8 +2,10 @@
 import { ref, onMounted } from 'vue'
 import { useOrdersStore } from '@/stores/orders.store'
 import { useToast } from '@/composables/useToast'
+import { UsersApi } from '@/api/users.api'
 import { OrderStatus } from '@/types/order.types'
 import type { Order } from '@/types/order.types'
+import type { CourierUser } from '@/types/user.types'
 import AppButton from '@/components/common/AppButton.vue'
 import AppBadge from '@/components/common/AppBadge.vue'
 import AppSpinner from '@/components/common/AppSpinner.vue'
@@ -56,33 +58,41 @@ const handleStatusUpdate = async (order: Order) => {
   }
 }
 
+// Couriers
+const couriers = ref<CourierUser[]>([])
+const couriersLoading = ref(false)
+
+const loadCouriers = async () => {
+  if (couriers.value.length) return
+  couriersLoading.value = true
+  try {
+    couriers.value = await UsersApi.getCouriers()
+  } catch {
+    toast.error('Failed to load couriers')
+  } finally {
+    couriersLoading.value = false
+  }
+}
+
 // Assign courier modal
 const isModalOpen = ref(false)
 const selectedOrder = ref<Order | null>(null)
-const courierIdInput = ref('')
-const courierIdError = ref('')
+const selectedCourierId = ref<number | null>(null)
 const isAssigning = ref(false)
 
-const openAssignModal = (order: Order) => {
+const openAssignModal = async (order: Order) => {
   selectedOrder.value = order
-  courierIdInput.value = order.courierId ? String(order.courierId) : ''
-  courierIdError.value = ''
+  selectedCourierId.value = order.courierId ?? null
   isModalOpen.value = true
+  await loadCouriers()
 }
 
 const handleAssignCourier = async () => {
-  if (!selectedOrder.value) return
-  courierIdError.value = ''
-
-  const id = Number(courierIdInput.value)
-  if (!courierIdInput.value || isNaN(id) || id <= 0) {
-    courierIdError.value = 'Enter a valid courier ID'
-    return
-  }
+  if (!selectedOrder.value || !selectedCourierId.value) return
 
   isAssigning.value = true
   try {
-    await store.assignCourier(selectedOrder.value.id, { courierId: id })
+    await store.assignCourier(selectedOrder.value.id, { courierId: selectedCourierId.value })
     toast.success('Courier assigned')
     isModalOpen.value = false
   } catch {
@@ -200,9 +210,7 @@ onMounted(async () => {
           >
             {{ nextStatusLabel[order.status] }}
           </AppButton>
-          <span v-else class="text-xs text-gray-400 px-3 py-1.5">
-            Final status
-          </span>
+          <span v-else class="text-xs text-gray-400 px-3 py-1.5">Final status</span>
         </div>
 
       </div>
@@ -215,26 +223,67 @@ onMounted(async () => {
           Order <span class="font-semibold text-gray-900">#{{ selectedOrder?.id }}</span>
         </p>
 
-        <div class="flex flex-col gap-1">
-          <label class="text-sm font-medium text-gray-700">Courier ID</label>
-          <input
-            v-model="courierIdInput"
-            type="number"
-            placeholder="Enter courier ID"
-            class="w-full border rounded-xl px-3 py-2 text-sm text-gray-900 placeholder-gray-400 bg-white transition focus:outline-none focus:ring-2 focus:border-transparent"
-            :class="
-              courierIdError
-                ? 'border-red-400 focus:ring-red-400'
-                : 'border-gray-200 focus:ring-blue-500'
-            "
-          />
-          <p v-if="courierIdError" class="text-xs text-red-500">{{ courierIdError }}</p>
+        <!-- Loading couriers -->
+        <div v-if="couriersLoading" class="flex items-center justify-center py-6">
+          <AppSpinner size="md" />
+        </div>
+
+        <!-- Empty couriers -->
+        <div v-else-if="!couriers.length" class="text-center py-6 text-sm text-gray-400">
+          No couriers registered in the system
+        </div>
+
+        <!-- Courier list -->
+        <div v-else class="flex flex-col gap-2">
+          <button
+            v-for="courier in couriers"
+            :key="courier.id"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors text-left"
+            :class="selectedCourierId === courier.id
+              ? 'border-blue-400 bg-blue-50'
+              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'"
+            @click="selectedCourierId = courier.id"
+          >
+            <!-- Avatar -->
+            <div
+              class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+              :class="selectedCourierId === courier.id
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-500'"
+            >
+              {{ courier.fullName.charAt(0).toUpperCase() }}
+            </div>
+
+            <!-- Info -->
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-900 truncate">{{ courier.fullName }}</p>
+              <p class="text-xs text-gray-400 truncate">{{ courier.email }}</p>
+            </div>
+
+            <!-- Check -->
+            <svg
+              v-if="selectedCourierId === courier.id"
+              class="w-4 h-4 text-blue-600 flex-shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2.5"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </button>
         </div>
       </div>
 
       <template #footer>
         <AppButton variant="secondary" @click="isModalOpen = false">Cancel</AppButton>
-        <AppButton :loading="isAssigning" @click="handleAssignCourier">Assign</AppButton>
+        <AppButton
+          :disabled="!selectedCourierId"
+          :loading="isAssigning"
+          @click="handleAssignCourier"
+        >
+          Assign
+        </AppButton>
       </template>
     </AppModal>
 

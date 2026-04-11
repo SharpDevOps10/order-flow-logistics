@@ -38,12 +38,22 @@ const handleLogout = async () => {
             </RouterLink>
           </div>
         </div>
-        <button
-          class="text-sm text-gray-400 hover:text-gray-700 transition-colors px-3 py-1.5 rounded-lg hover:bg-gray-100"
-          @click="handleLogout"
-        >
-          Logout
-        </button>
+        <!-- Right: user info + logout -->
+        <div class="flex items-center gap-3">
+          <div class="text-right">
+            <p class="text-xs font-medium text-gray-700 leading-tight">{{ authStore.user?.email }}</p>
+            <p class="text-xs text-gray-400 leading-tight">Courier</p>
+          </div>
+          <button
+            class="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-600 border border-red-200 hover:border-red-300 hover:bg-red-50 transition-colors px-3 py-1.5 rounded-lg"
+            @click="handleLogout"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Logout
+          </button>
+        </div>
       </div>
     </nav>
     <main class="max-w-6xl mx-auto px-6 py-8">
