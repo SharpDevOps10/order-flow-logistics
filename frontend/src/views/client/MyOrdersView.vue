@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useOrdersStore } from '@/stores/orders.store'
+import { useOrganizationsStore } from '@/stores/organizations.store'
 import { useToast } from '@/composables/useToast'
 import { OrderStatus } from '@/types/order.types'
 import type { Order } from '@/types/order.types'
@@ -9,10 +10,32 @@ import AppBadge from '@/components/common/AppBadge.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppSpinner from '@/components/common/AppSpinner.vue'
 import AppModal from '@/components/common/AppModal.vue'
+import OrderRouteMap from '@/components/map/OrderRouteMap.vue'
 
 const store = useOrdersStore()
+const orgsStore = useOrganizationsStore()
 const router = useRouter()
 const toast = useToast()
+
+const expandedRoutes = ref<Set<number>>(new Set())
+
+const toggleRoute = (orderId: number) => {
+  if (expandedRoutes.value.has(orderId)) {
+    expandedRoutes.value.delete(orderId)
+  } else {
+    expandedRoutes.value.add(orderId)
+  }
+}
+
+const getOrgForOrder = (order: Order) => {
+  return orgsStore.organizations.find((o) => o.id === order.organizationId) ?? null
+}
+
+const canShowRoute = (order: Order): boolean => {
+  if (!order.lat || !order.lng) return false
+  const org = getOrgForOrder(order)
+  return !!(org?.lat && org?.lng)
+}
 
 type BadgeVariant = 'yellow' | 'blue' | 'green'
 
@@ -64,7 +87,7 @@ const handleCancel = async () => {
 }
 
 onMounted(async () => {
-  await store.fetchMy()
+  await Promise.all([store.fetchMy(), orgsStore.fetchAll()])
   if (store.error) toast.error(store.error)
 })
 </script>
@@ -150,6 +173,34 @@ onMounted(async () => {
             <p class="text-gray-700 font-medium">
               {{ order.courierId ? `Assigned (ID: ${order.courierId})` : 'Not assigned yet' }}
             </p>
+          </div>
+        </div>
+
+        <!-- Route toggle -->
+        <div v-if="canShowRoute(order)">
+          <button
+            class="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
+            @click="toggleRoute(order.id)"
+          >
+            <svg
+              class="w-3.5 h-3.5 transition-transform duration-200"
+              :class="expandedRoutes.has(order.id) ? 'rotate-180' : ''"
+              fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+            </svg>
+            {{ expandedRoutes.has(order.id) ? 'Hide route' : 'Show route' }}
+          </button>
+
+          <div v-if="expandedRoutes.has(order.id)" class="mt-3">
+            <OrderRouteMap
+              :pickup-lat="Number(getOrgForOrder(order)!.lat)"
+              :pickup-lng="Number(getOrgForOrder(order)!.lng)"
+              :pickup-label="getOrgForOrder(order)!.name"
+              :delivery-lat="Number(order.lat)"
+              :delivery-lng="Number(order.lng)"
+              :delivery-label="order.deliveryAddress"
+            />
           </div>
         </div>
 
