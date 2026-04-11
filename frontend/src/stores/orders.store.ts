@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { OrdersApi } from '@/api/orders.api'
-import type { Order, CreateOrderDto } from '@/types/order.types'
+import type { Order, OrderWithItems, CreateOrderDto, AssignCourierDto } from '@/types/order.types'
 import type { OrderStatus } from '@/types/order.types'
 
 const extractErrorMessage = (error: unknown): string => {
@@ -53,7 +53,8 @@ export const useOrdersStore = defineStore('orders', () => {
     }
   }
 
-  const create = async (dto: CreateOrderDto) => {
+  // Returns OrderWithItems (includes items array) — only on create
+  const create = async (dto: CreateOrderDto): Promise<OrderWithItems> => {
     loading.value = true
     error.value = null
     try {
@@ -68,7 +69,7 @@ export const useOrdersStore = defineStore('orders', () => {
     }
   }
 
-  const updateStatus = async (id: string, status: OrderStatus) => {
+  const updateStatus = async (id: number, status: OrderStatus) => {
     loading.value = true
     error.value = null
     try {
@@ -84,11 +85,11 @@ export const useOrdersStore = defineStore('orders', () => {
     }
   }
 
-  const assignCourier = async (id: string, courierId: string) => {
+  const assignCourier = async (id: number, dto: AssignCourierDto) => {
     loading.value = true
     error.value = null
     try {
-      const updated = await OrdersApi.assignCourier(id, courierId)
+      const updated = await OrdersApi.assignCourier(id, dto)
       const idx = orders.value.findIndex((o) => o.id === id)
       if (idx !== -1) orders.value[idx] = updated
       return updated

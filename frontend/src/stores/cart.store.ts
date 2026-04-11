@@ -9,16 +9,22 @@ export interface CartItem {
 
 export const useCartStore = defineStore('cart', () => {
   const items = ref<CartItem[]>([])
-  const organizationId = ref<string | null>(null)
+  // Tracks which org the cart belongs to — one org per cart
+  const organizationId = ref<number | null>(null)
 
   const total = computed(() =>
     items.value.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
   )
 
+  const itemCount = computed(() =>
+    items.value.reduce((sum, item) => sum + item.quantity, 0),
+  )
+
   const isEmpty = computed(() => items.value.length === 0)
 
+  // If product is from a different org — clear cart first (one org per order)
   const addItem = (product: Product, quantity = 1) => {
-    if (organizationId.value && organizationId.value !== product.organizationId) {
+    if (organizationId.value !== null && organizationId.value !== product.organizationId) {
       items.value = []
     }
     organizationId.value = product.organizationId
@@ -31,9 +37,19 @@ export const useCartStore = defineStore('cart', () => {
     }
   }
 
-  const removeItem = (productId: string) => {
+  const removeItem = (productId: number) => {
     items.value = items.value.filter((i) => i.product.id !== productId)
     if (items.value.length === 0) organizationId.value = null
+  }
+
+  const updateQuantity = (productId: number, quantity: number) => {
+    const item = items.value.find((i) => i.product.id === productId)
+    if (!item) return
+    if (quantity <= 0) {
+      removeItem(productId)
+    } else {
+      item.quantity = quantity
+    }
   }
 
   const clear = () => {
@@ -41,5 +57,5 @@ export const useCartStore = defineStore('cart', () => {
     organizationId.value = null
   }
 
-  return { items, organizationId, total, isEmpty, addItem, removeItem, clear }
+  return { items, organizationId, total, itemCount, isEmpty, addItem, removeItem, updateQuantity, clear }
 })

@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { defineStore } from 'pinia'
 import { RoutingApi } from '@/api/routing.api'
-import type { DeliveryRoute } from '@/types/routing.types'
+import type { OptimizedRoute } from '@/types/routing.types'
 
 const extractErrorMessage = (error: unknown): string => {
   if (error && typeof error === 'object' && 'response' in error) {
@@ -12,7 +12,7 @@ const extractErrorMessage = (error: unknown): string => {
 }
 
 export const useRoutingStore = defineStore('routing', () => {
-  const routes = ref<DeliveryRoute[]>([])
+  const routes = ref<OptimizedRoute[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
 

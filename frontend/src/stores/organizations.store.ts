@@ -71,7 +71,7 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     }
   }
 
-  const update = async (id: string, dto: UpdateOrganizationDto) => {
+  const update = async (id: number, dto: UpdateOrganizationDto) => {
     loading.value = true
     error.value = null
     try {
@@ -87,7 +87,7 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     }
   }
 
-  const approve = async (id: string) => {
+  const approve = async (id: number) => {
     loading.value = true
     error.value = null
     try {

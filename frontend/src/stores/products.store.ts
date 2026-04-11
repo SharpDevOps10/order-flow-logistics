@@ -16,7 +16,7 @@ export const useProductsStore = defineStore('products', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  const fetchByOrg = async (orgId: string) => {
+  const fetchByOrg = async (orgId: number) => {
     loading.value = true
     error.value = null
     try {
@@ -28,7 +28,7 @@ export const useProductsStore = defineStore('products', () => {
     }
   }
 
-  const create = async (orgId: string, dto: CreateProductDto) => {
+  const create = async (orgId: number, dto: CreateProductDto) => {
     loading.value = true
     error.value = null
     try {
@@ -43,7 +43,7 @@ export const useProductsStore = defineStore('products', () => {
     }
   }
 
-  const update = async (id: string, dto: UpdateProductDto) => {
+  const update = async (id: number, dto: UpdateProductDto) => {
     loading.value = true
     error.value = null
     try {
@@ -59,7 +59,7 @@ export const useProductsStore = defineStore('products', () => {
     }
   }
 
-  const remove = async (id: string) => {
+  const remove = async (id: number) => {
     loading.value = true
     error.value = null
     try {
