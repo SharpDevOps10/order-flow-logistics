@@ -30,7 +30,7 @@ onMounted(() => store.fetchPending())
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-3xl font-bold text-gray-900">Pending Organizations</h1>
-        <p class="text-sm text-gray-400 mt-1">Організації, що очікують підтвердження</p>
+        <p class="text-sm text-gray-400 mt-1">Organizations awaiting approval</p>
       </div>
       <span
         v-if="!store.loading && store.organizations.length"
@@ -52,15 +52,15 @@ onMounted(() => store.fetchPending())
     >
       <p class="text-sm text-red-600">{{ store.error }}</p>
       <AppButton variant="ghost" size="sm" class="mt-3" @click="store.fetchPending()">
-        Спробувати знову
+        Try again
       </AppButton>
     </div>
 
     <!-- Empty -->
     <div v-else-if="!store.organizations.length" class="text-center py-20">
       <p class="text-4xl mb-3">✅</p>
-      <p class="text-base font-semibold text-gray-900 mb-1">Всі організації перевірені</p>
-      <p class="text-sm text-gray-400">Нових заявок немає</p>
+      <p class="text-base font-semibold text-gray-900 mb-1">All organizations reviewed</p>
+      <p class="text-sm text-gray-400">No pending applications</p>
     </div>
 
     <!-- Grid -->

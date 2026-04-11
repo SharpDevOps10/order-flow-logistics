@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AppSpinner from './AppSpinner.vue'
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
+type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'green'
 type ButtonSize = 'sm' | 'md' | 'lg'
 
 interface Props {
@@ -25,6 +25,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   secondary: 'bg-white border border-gray-200 hover:bg-gray-50 text-gray-700',
   ghost: 'text-gray-600 hover:bg-gray-100 hover:text-gray-900',
   danger: 'bg-red-600 hover:bg-red-700 text-white',
+  green: 'bg-green-600 hover:bg-green-700 text-white',
 }
 
 const sizeClasses: Record<ButtonSize, string> = {
