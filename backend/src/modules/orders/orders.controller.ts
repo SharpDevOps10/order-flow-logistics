@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -59,6 +60,15 @@ export class OrdersController {
     @GetCurrentUser('sub') supplierId: number,
   ) {
     return this.ordersService.assignCourier(id, supplierId, dto);
+  }
+
+  @Roles(Role.CLIENT)
+  @Delete(':id')
+  cancel(
+    @Param('id', ParseIntPipe) id: number,
+    @GetCurrentUser('sub') clientId: number,
+  ) {
+    return this.ordersService.cancel(id, clientId);
   }
 
   @Roles(Role.COURIER)

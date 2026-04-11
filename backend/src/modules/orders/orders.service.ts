@@ -189,6 +189,39 @@ export class OrdersService {
     return updated;
   }
 
+  async cancel(orderId: number, clientId: number) {
+    const [order] = await this.db
+      .select()
+      .from(schema.orders)
+      .where(
+        and(
+          eq(schema.orders.id, orderId),
+          eq(schema.orders.clientId, clientId),
+        ),
+      );
+
+    if (!order) {
+      throw new NotFoundException('Order not found or access denied');
+    }
+
+    if (order.status !== OrderStatus.PENDING) {
+      throw new BadRequestException(
+        'Only pending orders can be cancelled',
+      );
+    }
+
+    await this.db.transaction(async (tx) => {
+      await tx
+        .delete(schema.orderItems)
+        .where(eq(schema.orderItems.orderId, orderId));
+      await tx
+        .delete(schema.orders)
+        .where(eq(schema.orders.id, orderId));
+    });
+
+    return order;
+  }
+
   async findCourierOrders(courierId: number) {
     return this.db
       .select()

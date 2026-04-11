@@ -37,4 +37,9 @@ export const OrdersApi = {
     const { data } = await axiosInstance.patch<Order>(`/orders/${id}/assign-courier`, dto)
     return data
   },
+
+  cancel: async (id: number): Promise<Order> => {
+    const { data } = await axiosInstance.delete<Order>(`/orders/${id}`)
+    return data
+  },
 }

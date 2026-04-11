@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useOrdersStore } from '@/stores/orders.store'
 import { useToast } from '@/composables/useToast'
 import { OrderStatus } from '@/types/order.types'
+import type { Order } from '@/types/order.types'
 import AppBadge from '@/components/common/AppBadge.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppSpinner from '@/components/common/AppSpinner.vue'
+import AppModal from '@/components/common/AppModal.vue'
 
 const store = useOrdersStore()
 const router = useRouter()
@@ -35,6 +37,30 @@ const formatDate = (dateStr: string | null): string => {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+// Cancel flow
+const isCancelModalOpen = ref(false)
+const selectedOrder = ref<Order | null>(null)
+const isCancelling = ref(false)
+
+const openCancelModal = (order: Order) => {
+  selectedOrder.value = order
+  isCancelModalOpen.value = true
+}
+
+const handleCancel = async () => {
+  if (!selectedOrder.value) return
+  isCancelling.value = true
+  try {
+    await store.cancel(selectedOrder.value.id)
+    toast.success(`Order #${selectedOrder.value.id} cancelled`)
+    isCancelModalOpen.value = false
+  } catch {
+    toast.error(store.error ?? 'Failed to cancel order')
+  } finally {
+    isCancelling.value = false
+  }
 }
 
 onMounted(async () => {
@@ -127,8 +153,40 @@ onMounted(async () => {
           </div>
         </div>
 
+        <!-- Actions -->
+        <div
+          v-if="order.status === OrderStatus.Pending"
+          class="flex justify-end pt-1 border-t border-gray-50"
+        >
+          <AppButton variant="danger" size="sm" @click="openCancelModal(order)">
+            Cancel order
+          </AppButton>
+        </div>
+
       </div>
     </div>
+
+    <!-- Cancel confirmation modal -->
+    <AppModal v-model="isCancelModalOpen" title="Cancel order">
+      <div class="flex flex-col gap-3">
+        <p class="text-sm text-gray-600">
+          Are you sure you want to cancel
+          <span class="font-semibold text-gray-900">Order #{{ selectedOrder?.id }}</span>?
+        </p>
+        <div class="bg-yellow-50 border border-yellow-100 rounded-xl px-4 py-3">
+          <p class="text-xs text-yellow-700">
+            This action cannot be undone. The order will be permanently removed.
+          </p>
+        </div>
+      </div>
+
+      <template #footer>
+        <AppButton variant="secondary" @click="isCancelModalOpen = false">Keep order</AppButton>
+        <AppButton variant="danger" :loading="isCancelling" @click="handleCancel">
+          Yes, cancel
+        </AppButton>
+      </template>
+    </AppModal>
 
   </div>
 </template>

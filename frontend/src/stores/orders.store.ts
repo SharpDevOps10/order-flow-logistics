@@ -101,6 +101,20 @@ export const useOrdersStore = defineStore('orders', () => {
     }
   }
 
+  const cancel = async (id: number) => {
+    loading.value = true
+    error.value = null
+    try {
+      await OrdersApi.cancel(id)
+      orders.value = orders.value.filter((o) => o.id !== id)
+    } catch (e: unknown) {
+      error.value = extractErrorMessage(e)
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     orders,
     loading,
@@ -111,5 +125,6 @@ export const useOrdersStore = defineStore('orders', () => {
     create,
     updateStatus,
     assignCourier,
+    cancel,
   }
 })
