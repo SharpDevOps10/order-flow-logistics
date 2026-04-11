@@ -4,6 +4,13 @@ import { UserRole } from '@/types/auth.types'
 import { jwtDecode } from 'jwt-decode'
 import type { CurrentUser } from '@/types/auth.types'
 
+declare module 'vue-router' {
+  interface RouteMeta {
+    role?: UserRole
+    public?: boolean
+  }
+}
+
 const ROLE_HOME: Record<UserRole, string> = {
   [UserRole.Client]: '/client/marketplace',
   [UserRole.Supplier]: '/supplier/organizations',
@@ -30,8 +37,9 @@ const router = createRouter({
 router.beforeEach((to) => {
   const role = getRole()
   const isAuthRoute = to.path === '/login' || to.path === '/register'
+  const isPublic = to.matched.some((r) => r.meta.public)
 
-  if (!role && !isAuthRoute) {
+  if (!role && !isAuthRoute && !isPublic) {
     return '/login'
   }
 
