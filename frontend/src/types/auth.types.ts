@@ -16,7 +16,8 @@ export interface CurrentUser {
 export interface SignUpDto {
   email: string
   password: string
-  role: UserRole
+  fullName: string
+  role?: UserRole
 }
 
 export interface SignInDto {
