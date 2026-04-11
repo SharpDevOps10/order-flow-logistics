@@ -29,10 +29,10 @@ export const useAuthStore = defineStore('auth', () => {
   const role = computed(() => user.value?.role ?? null)
   const isAuthenticated = computed(() => !!accessToken.value)
 
-  const setTokens = (tokens: { access_token: string; refresh_token: string }) => {
-    accessToken.value = tokens.access_token
-    localStorage.setItem('access_token', tokens.access_token)
-    localStorage.setItem('refresh_token', tokens.refresh_token)
+  const setTokens = (tokens: { accessToken: string; refreshToken: string }) => {
+    accessToken.value = tokens.accessToken
+    localStorage.setItem('access_token', tokens.accessToken)
+    localStorage.setItem('refresh_token', tokens.refreshToken)
   }
 
   const clearTokens = () => {
