@@ -6,6 +6,7 @@ import type { RouteWaypoint } from '@/types/routing.types'
 import AppButton from '@/components/common/AppButton.vue'
 import AppSpinner from '@/components/common/AppSpinner.vue'
 import AppBadge from '@/components/common/AppBadge.vue'
+import RouteMap from '@/components/map/RouteMap.vue'
 
 const store = useRoutingStore()
 const toast = useToast()
@@ -109,6 +110,9 @@ onMounted(async () => {
           <p class="text-2xl font-bold text-gray-900">{{ store.routes.length }}</p>
         </div>
       </div>
+
+      <!-- Interactive map -->
+      <RouteMap :routes="store.routes" />
 
       <!-- One card per organization route -->
       <div
