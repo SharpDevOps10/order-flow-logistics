@@ -29,13 +29,6 @@ onMounted(() => {
   const map = L.map(mapContainer.value, {
     center: [Number(props.organization.lat), Number(props.organization.lng)],
     zoom: 15,
-    dragging: false,
-    touchZoom: false,
-    scrollWheelZoom: false,
-    doubleClickZoom: false,
-    zoomControl: false,
-    boxZoom: false,
-    keyboard: false,
   })
 
   // Add tile layer
