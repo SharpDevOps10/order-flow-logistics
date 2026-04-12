@@ -1,12 +1,56 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import type { Organization } from '@/types/organization.types'
 import AppBadge from '@/components/common/AppBadge.vue'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 interface Props {
   organization: Organization
 }
 
 const props = defineProps<Props>()
+
+const mapContainer = ref<HTMLDivElement>()
+const mapInitialized = ref(false)
+
+onMounted(() => {
+  if (!mapContainer.value || !props.organization.lat || !props.organization.lng) return
+
+  // Fix Leaflet default icon path
+  delete (L.Icon.Default.prototype as any)._getIconUrl
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  })
+
+  // Initialize map
+  const map = L.map(mapContainer.value, {
+    center: [Number(props.organization.lat), Number(props.organization.lng)],
+    zoom: 15,
+    dragging: false,
+    touchZoom: false,
+    scrollWheelZoom: false,
+    doubleClickZoom: false,
+    zoomControl: false,
+    boxZoom: false,
+    keyboard: false,
+  })
+
+  // Add tile layer
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19,
+  }).addTo(map)
+
+  // Add marker
+  L.marker([Number(props.organization.lat), Number(props.organization.lng)])
+    .addTo(map)
+    .bindPopup(props.organization.address || 'Location')
+
+  mapInitialized.value = true
+})
 </script>
 
 <template>
@@ -29,16 +73,21 @@ const props = defineProps<Props>()
       </AppBadge>
     </div>
 
-    <!-- Coordinates -->
-    <div
-      v-if="props.organization.lat && props.organization.lng"
-      class="flex items-center gap-2 text-sm text-gray-500 bg-gray-50 rounded-xl px-4 py-3"
-    >
-      <svg class="w-4 h-4 flex-shrink-0 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="3" />
-        <path stroke-linecap="round" d="M12 2v3M12 19v3M2 12h3M19 12h3" />
-      </svg>
-      <span class="font-mono">{{ Number(props.organization.lat).toFixed(4) }}, {{ Number(props.organization.lng).toFixed(4) }}</span>
+    <!-- Address and Map -->
+    <div v-if="props.organization.lat && props.organization.lng" class="flex flex-col gap-3 -mx-6 -mb-6">
+      <!-- Address -->
+      <div class="px-6 flex items-start gap-2 text-sm">
+        <svg class="w-4 h-4 flex-shrink-0 text-blue-500 mt-0.5" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" />
+        </svg>
+        <span class="text-gray-700">{{ props.organization.address }}</span>
+      </div>
+
+      <!-- Map -->
+      <div
+        ref="mapContainer"
+        class="h-48 bg-gray-100 rounded-b-2xl border-t border-gray-100 leaflet-container"
+      />
     </div>
 
     <!-- Footer: meta + actions -->

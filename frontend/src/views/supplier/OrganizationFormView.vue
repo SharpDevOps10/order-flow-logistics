@@ -39,6 +39,7 @@ const handleSubmit = async () => {
   const dto = {
     name: name.value.trim(),
     ...(region.value && { region: region.value.trim() }),
+    ...(address.value && { address: address.value.trim() }),
     ...(coords.value && { lat: Number(coords.value.lat), lng: Number(coords.value.lng) }),
   }
 
@@ -83,6 +84,7 @@ onMounted(() => {
 
   name.value = existing.name
   region.value = existing.region ?? ''
+  address.value = existing.address ?? ''
   if (existing.lat && existing.lng) {
     coords.value = { lat: existing.lat, lng: existing.lng }
   }

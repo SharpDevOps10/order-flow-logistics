@@ -26,6 +26,7 @@ export class OrganizationsService {
       .values({
         name: dto.name,
         region: dto.region,
+        address: dto.address,
         lat: dto.lat?.toString(),
         lng: dto.lng?.toString(),
         ownerId: ownerId,

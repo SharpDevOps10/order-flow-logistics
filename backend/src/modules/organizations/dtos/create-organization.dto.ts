@@ -10,6 +10,10 @@ export class CreateOrganizationDto {
   @IsOptional()
   region?: string;
 
+  @IsString()
+  @IsOptional()
+  address?: string;
+
   @IsNumber()
   @IsOptional()
   @Type(() => Number)
