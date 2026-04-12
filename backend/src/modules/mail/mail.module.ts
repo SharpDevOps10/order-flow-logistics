@@ -13,17 +13,22 @@ import { MailService } from './mail.service';
         transport: {
           host: config.get<string>('MAIL_HOST'),
           port: config.get<number>('MAIL_PORT'),
-          secure: false,
+          secure: true,
           auth: {
             user: config.get<string>('MAIL_USER'),
             pass: config.get<string>('MAIL_PASS'),
           },
+          tls: {
+            rejectUnauthorized: false,
+          },
+          connectionTimeout: 10000,
+          socketTimeout: 10000,
         },
         defaults: {
           from: `"Order Flow Logistics" <${config.get<string>('MAIL_FROM')}>`,
         },
         template: {
-          dir: join(__dirname, 'templates'),
+          dir: join(process.cwd(), 'templates'),
           adapter: new HandlebarsAdapter(),
           options: {
             strict: true,
