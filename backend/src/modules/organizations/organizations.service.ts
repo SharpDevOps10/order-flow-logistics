@@ -11,11 +11,13 @@ import { DATABASE_CONNECTION } from '../../database/database.module';
 import { CreateOrganizationDto } from './dtos/create-organization.dto';
 import { and } from 'drizzle-orm/sql/expressions/conditions';
 import { UpdateOrganizationDto } from './dtos/update-organization.dto';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class OrganizationsService {
   constructor(
     @Inject(DATABASE_CONNECTION) private db: NodePgDatabase<typeof schema>,
+    private readonly mailService: MailService,
   ) {}
 
   async create(dto: CreateOrganizationDto, ownerId: number) {
@@ -70,6 +72,22 @@ export class OrganizationsService {
       .returning();
 
     if (!updatedOrg) throw new NotFoundException('Organization not found');
+
+    if (updatedOrg.ownerId) {
+      const [owner] = await this.db
+        .select({ email: schema.users.email, fullName: schema.users.fullName })
+        .from(schema.users)
+        .where(eq(schema.users.id, updatedOrg.ownerId));
+
+      if (owner) {
+        await this.mailService.sendOrganizationApproved(
+          owner.email,
+          owner.fullName,
+          updatedOrg.name,
+        );
+      }
+    }
+
     return updatedOrg;
   }
 

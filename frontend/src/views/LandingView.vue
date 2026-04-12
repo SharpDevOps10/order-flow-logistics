@@ -24,32 +24,32 @@ const features: Feature[] = [
   {
     icon: '🛍️',
     role: 'CLIENT',
-    title: 'Клієнт',
-    description: 'Переглядайте каталог магазинів, обирайте товари, оформлюйте замовлення та відстежуйте їх статус у режимі реального часу.',
+    title: 'Client',
+    description: 'Browse store catalogs, select products, place orders and track their status in real-time.',
     color: 'text-blue-700',
     bg: 'bg-blue-50 border-blue-100',
   },
   {
     icon: '🏪',
     role: 'SUPPLIER',
-    title: 'Постачальник',
-    description: 'Створюйте власні магазини, керуйте каталогом товарів, обробляйте вхідні замовлення та призначайте кур\'єрів.',
+    title: 'Supplier',
+    description: 'Create your own stores, manage product catalogs, process incoming orders and assign couriers.',
     color: 'text-green-700',
     bg: 'bg-green-50 border-green-100',
   },
   {
     icon: '🚴',
     role: 'COURIER',
-    title: 'Кур\'єр',
-    description: 'Отримуйте призначені доставки та переглядайте оптимізований маршрут на інтерактивній карті з алгоритмом Дейкстри.',
+    title: 'Courier',
+    description: 'Receive assigned deliveries and view an optimized route on an interactive map using Dijkstra\'s algorithm.',
     color: 'text-orange-700',
     bg: 'bg-orange-50 border-orange-100',
   },
   {
     icon: '🛡️',
     role: 'ADMIN',
-    title: 'Адміністратор',
-    description: 'Модеруйте платформу: переглядайте заявки на реєстрацію магазинів та підтверджуйте їх для відображення у каталозі.',
+    title: 'Administrator',
+    description: 'Moderate the platform: review store registration applications and approve them for display in the catalog.',
     color: 'text-purple-700',
     bg: 'bg-purple-50 border-purple-100',
   },
@@ -57,11 +57,11 @@ const features: Feature[] = [
 
 const techStack: TechItem[] = [
   { name: 'NestJS', description: 'Backend framework' },
-  { name: 'PostgreSQL', description: 'База даних' },
-  { name: 'Drizzle ORM', description: 'ORM шар' },
+  { name: 'PostgreSQL', description: 'Database' },
+  { name: 'Drizzle ORM', description: 'ORM Layer' },
   { name: 'Vue 3', description: 'Frontend SPA' },
   { name: 'Pinia', description: 'State management' },
-  { name: 'Dijkstra', description: 'Алгоритм маршрутів' },
+  { name: 'Dijkstra', description: 'Route Algorithm' },
 ]
 </script>
 
@@ -80,13 +80,13 @@ const techStack: TechItem[] = [
             class="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors px-3 py-1.5"
             @click="goToLogin"
           >
-            Увійти
+            Log In
           </button>
           <button
             class="text-sm bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-1.5 rounded-lg transition-colors"
             @click="goToRegister"
           >
-            Зареєструватися
+            Sign Up
           </button>
         </div>
       </div>
@@ -98,19 +98,19 @@ const techStack: TechItem[] = [
       <section class="max-w-6xl mx-auto px-6 pt-20 pb-24 text-center">
         <div class="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full px-4 py-1.5 mb-8">
           <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-          <span class="text-sm text-blue-700 font-medium">Дипломна робота · 2026</span>
+          <span class="text-sm text-blue-700 font-medium">Thesis Project · 2026</span>
         </div>
 
         <h1 class="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6 leading-tight tracking-tight">
-          Веб-система опрацювання<br />
-          <span class="text-blue-600">замовлень з оптимізацією</span><br />
-          маршрутів
+          Order Management System<br />
+          <span class="text-blue-600">with Route Optimization</span><br />
+          for Last-Mile Delivery
         </h1>
 
         <p class="text-xl text-gray-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-          SaaS-маркетплейс для малого бізнесу з мультиролевою системою,
-          обробкою замовлень та оптимізацією маршрутів доставки на основі
-          алгоритму Дейкстри.
+          A SaaS marketplace for small businesses with a multi-role system,
+          order processing, and delivery route optimization based on
+          Dijkstra's algorithm.
         </p>
 
         <div class="flex items-center justify-center gap-4 flex-wrap">
@@ -118,13 +118,13 @@ const techStack: TechItem[] = [
             class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-xl transition-colors text-base shadow-sm"
             @click="goToRegister"
           >
-            Почати роботу
+            Get Started
           </button>
           <button
             class="border border-gray-200 hover:border-gray-300 bg-white text-gray-700 font-semibold px-8 py-3 rounded-xl transition-colors text-base"
             @click="goToLogin"
           >
-            Увійти в систему
+            Sign In
           </button>
         </div>
 
@@ -132,15 +132,15 @@ const techStack: TechItem[] = [
         <div class="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto">
           <div>
             <p class="text-3xl font-bold text-gray-900">4</p>
-            <p class="text-sm text-gray-500 mt-1">Ролі</p>
+            <p class="text-sm text-gray-500 mt-1">Roles</p>
           </div>
           <div>
             <p class="text-3xl font-bold text-gray-900">JWT</p>
-            <p class="text-sm text-gray-500 mt-1">Авторизація</p>
+            <p class="text-sm text-gray-500 mt-1">Authorization</p>
           </div>
           <div>
             <p class="text-3xl font-bold text-gray-900">∞</p>
-            <p class="text-sm text-gray-500 mt-1">Організації</p>
+            <p class="text-sm text-gray-500 mt-1">Organizations</p>
           </div>
         </div>
       </section>
@@ -151,8 +151,8 @@ const techStack: TechItem[] = [
       <!-- Features / Roles -->
       <section class="max-w-6xl mx-auto px-6 py-20">
         <div class="text-center mb-12">
-          <h2 class="text-3xl font-bold text-gray-900 mb-3">Чотири ролі — єдина платформа</h2>
-          <p class="text-gray-500 text-lg">Кожен учасник отримує персоналізований інтерфейс зі своїм набором можливостей</p>
+          <h2 class="text-3xl font-bold text-gray-900 mb-3">Four Roles — One Platform</h2>
+          <p class="text-gray-500 text-lg">Each participant gets a personalized interface with their own set of features</p>
         </div>
 
         <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -179,30 +179,30 @@ const techStack: TechItem[] = [
       <section class="bg-gray-50">
         <div class="max-w-6xl mx-auto px-6 py-20 flex flex-col lg:flex-row items-center gap-12">
           <div class="flex-1">
-            <span class="text-xs font-semibold tracking-widest uppercase text-blue-600">Наукова частина</span>
-            <h2 class="text-3xl font-bold text-gray-900 mt-2 mb-4">Алгоритм оптимізації маршрутів</h2>
+            <span class="text-xs font-semibold tracking-widest uppercase text-blue-600">Scientific Part</span>
+            <h2 class="text-3xl font-bold text-gray-900 mt-2 mb-4">Route Optimization Algorithm</h2>
             <p class="text-gray-500 leading-relaxed mb-6">
-              Ключова особливість системи — алгоритм Дейкстри для побудови оптимального
-              маршруту доставки. Відстані між точками розраховуються за формулою
-              гаверсинуса (велике коло). Кур'єр бачить інтерактивну карту з точками
-              PICKUP та DELIVERY, впорядкованими за мінімальним шляхом.
+              The key feature of the system is Dijkstra's algorithm for building an optimal
+              delivery route. Distances between points are calculated using the
+              haversine formula (great circle distance). The courier sees an interactive map with
+              PICKUP and DELIVERY points, ordered by the shortest path.
             </p>
             <ul class="space-y-2">
               <li class="flex items-center gap-3 text-sm text-gray-700">
                 <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">✓</span>
-                Зважений граф на основі GPS-координат
+                Weighted graph based on GPS coordinates
               </li>
               <li class="flex items-center gap-3 text-sm text-gray-700">
                 <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">✓</span>
-                Формула гаверсинуса для реальних відстаней
+                Haversine formula for real distances
               </li>
               <li class="flex items-center gap-3 text-sm text-gray-700">
                 <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">✓</span>
-                Жадібна оптимізація для кількох замовлень
+                Greedy optimization for multiple orders
               </li>
               <li class="flex items-center gap-3 text-sm text-gray-700">
                 <span class="w-5 h-5 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold flex-shrink-0">✓</span>
-                Візуалізація маршруту на Leaflet / OpenStreetMap
+                Route visualization on Leaflet / OpenStreetMap
               </li>
             </ul>
           </div>
@@ -210,12 +210,12 @@ const techStack: TechItem[] = [
           <!-- Route diagram -->
           <div class="flex-1 flex justify-center">
             <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full max-w-sm">
-              <p class="text-xs text-gray-400 font-medium uppercase tracking-widest mb-4">Приклад маршруту</p>
+              <p class="text-xs text-gray-400 font-medium uppercase tracking-widest mb-4">Route Example</p>
               <div class="space-y-3">
                 <div class="flex items-center gap-3">
                   <span class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center text-sm">🏪</span>
                   <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-800">PICKUP — Магазин А</p>
+                    <p class="text-sm font-medium text-gray-800">PICKUP — Store A</p>
                     <p class="text-xs text-gray-400">50.4501° N, 30.5234° E</p>
                   </div>
                 </div>
@@ -225,7 +225,7 @@ const techStack: TechItem[] = [
                 <div class="flex items-center gap-3">
                   <span class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm">📦</span>
                   <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-800">DELIVERY — Клієнт 1</p>
+                    <p class="text-sm font-medium text-gray-800">DELIVERY — Client 1</p>
                     <p class="text-xs text-gray-400">50.4612° N, 30.5150° E</p>
                   </div>
                 </div>
@@ -235,14 +235,14 @@ const techStack: TechItem[] = [
                 <div class="flex items-center gap-3">
                   <span class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm">📦</span>
                   <div class="flex-1">
-                    <p class="text-sm font-medium text-gray-800">DELIVERY — Клієнт 2</p>
+                    <p class="text-sm font-medium text-gray-800">DELIVERY — Client 2</p>
                     <p class="text-xs text-gray-400">50.4580° N, 30.5310° E</p>
                   </div>
                 </div>
               </div>
               <div class="mt-4 pt-4 border-t border-gray-100 flex justify-between text-xs text-gray-500">
-                <span>Загальна відстань</span>
-                <span class="font-semibold text-gray-800">2.0 км</span>
+                <span>Total Distance</span>
+                <span class="font-semibold text-gray-800">2.0 km</span>
               </div>
             </div>
           </div>
@@ -255,8 +255,8 @@ const techStack: TechItem[] = [
       <!-- Tech Stack -->
       <section class="max-w-6xl mx-auto px-6 py-20">
         <div class="text-center mb-12">
-          <h2 class="text-3xl font-bold text-gray-900 mb-3">Технічний стек</h2>
-          <p class="text-gray-500 text-lg">Сучасні технології для production-ready рішення</p>
+          <h2 class="text-3xl font-bold text-gray-900 mb-3">Technology Stack</h2>
+          <p class="text-gray-500 text-lg">Modern technologies for production-ready solution</p>
         </div>
 
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -274,20 +274,20 @@ const techStack: TechItem[] = [
       <!-- CTA -->
       <section class="bg-blue-600">
         <div class="max-w-6xl mx-auto px-6 py-16 text-center">
-          <h2 class="text-3xl font-bold text-white mb-4">Готові розпочати?</h2>
-          <p class="text-blue-200 text-lg mb-8">Оберіть роль та увійдіть у систему</p>
+          <h2 class="text-3xl font-bold text-white mb-4">Ready to Get Started?</h2>
+          <p class="text-blue-200 text-lg mb-8">Choose your role and sign in</p>
           <div class="flex items-center justify-center gap-4 flex-wrap">
             <button
               class="bg-white hover:bg-gray-50 text-blue-600 font-semibold px-8 py-3 rounded-xl transition-colors text-base"
               @click="goToRegister"
             >
-              Зареєструватися
+              Sign Up
             </button>
             <button
               class="border border-blue-400 hover:border-white text-white font-semibold px-8 py-3 rounded-xl transition-colors text-base"
               @click="goToLogin"
             >
-              Увійти
+              Log In
             </button>
           </div>
         </div>
@@ -297,7 +297,7 @@ const techStack: TechItem[] = [
     <!-- Footer -->
     <footer class="border-t border-gray-100 bg-white">
       <div class="max-w-6xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-2 text-sm text-gray-400">
-        <span>© 2026 OrderFlow Logistics — Дипломна робота</span>
+        <span>© 2026 OrderFlow Logistics — Thesis Project</span>
         <span>NestJS · Vue 3 · PostgreSQL · Dijkstra</span>
       </div>
     </footer>

@@ -43,9 +43,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   const signUp = async (dto: SignUpDto) => {
     loading.value = true
-    error.value = null
     try {
       const tokens = await AuthApi.signUp(dto)
+      error.value = null
       setTokens(tokens)
     } catch (e: unknown) {
       error.value = extractErrorMessage(e)
@@ -57,9 +57,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   const signIn = async (dto: SignInDto) => {
     loading.value = true
-    error.value = null
     try {
       const tokens = await AuthApi.signIn(dto)
+      error.value = null
       setTokens(tokens)
     } catch (e: unknown) {
       error.value = extractErrorMessage(e)

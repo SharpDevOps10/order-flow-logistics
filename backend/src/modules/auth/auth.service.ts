@@ -58,10 +58,10 @@ export class AuthService {
       .select()
       .from(schema.users)
       .where(eq(schema.users.email, dto.email));
-    if (!user) throw new UnauthorizedException('Access Denied');
+    if (!user) throw new UnauthorizedException('Invalid email or password');
 
     const passwordMatches = await argon2.verify(user.password, dto.password);
-    if (!passwordMatches) throw new UnauthorizedException('Access Denied');
+    if (!passwordMatches) throw new UnauthorizedException('Invalid email or password');
 
     const tokens = await this.getTokens(user.id, user.email, user.role);
     await this.updateRefreshTokenHash(user.id, tokens.refreshToken);

@@ -32,11 +32,11 @@ const validate = (): boolean => {
   let valid = true
 
   if (!form.email.trim()) {
-    fieldErrors.email = 'Введіть email'
+    fieldErrors.email = 'Enter your email'
     valid = false
   }
   if (!form.password) {
-    fieldErrors.password = 'Введіть пароль'
+    fieldErrors.password = 'Enter your password'
     valid = false
   }
 
@@ -51,7 +51,8 @@ const handleSubmit = async () => {
     const role = authStore.role
     if (role) router.push(ROLE_HOME[role])
   } catch {
-    // error already stored in authStore.error
+    // Clear password on auth error, keep email for retry
+    form.password = ''
   }
 }
 </script>
@@ -60,8 +61,8 @@ const handleSubmit = async () => {
   <div>
     <!-- Header -->
     <div class="mb-7">
-      <h1 class="text-2xl font-bold text-gray-900">Увійти в систему</h1>
-      <p class="text-sm text-gray-400 mt-1">Введіть свої дані для входу</p>
+      <h1 class="text-2xl font-bold text-gray-900">Sign In</h1>
+      <p class="text-sm text-gray-400 mt-1">Enter your credentials to sign in</p>
     </div>
 
     <!-- Form -->
@@ -77,7 +78,7 @@ const handleSubmit = async () => {
 
       <AppInput
         v-model="form.password"
-        label="Пароль"
+        label="Password"
         type="password"
         placeholder="••••••••"
         :error="fieldErrors.password"
@@ -97,22 +98,22 @@ const handleSubmit = async () => {
         :loading="authStore.loading"
         class="w-full"
       >
-        Увійти
+        Sign In
       </AppButton>
     </form>
 
     <!-- Divider -->
     <div class="flex items-center gap-3 my-6">
       <div class="flex-1 h-px bg-gray-100" />
-      <span class="text-xs text-gray-400">або</span>
+      <span class="text-xs text-gray-400">or</span>
       <div class="flex-1 h-px bg-gray-100" />
     </div>
 
     <!-- Link to register -->
     <p class="text-center text-sm text-gray-500">
-      Немає акаунту?
+      Don't have an account?
       <RouterLink to="/register" class="text-blue-600 font-medium hover:underline ml-1">
-        Зареєструватися
+        Sign Up
       </RouterLink>
     </p>
   </div>

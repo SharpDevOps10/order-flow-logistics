@@ -26,20 +26,20 @@ type RoleOption = {
 const roleOptions: RoleOption[] = [
   {
     value: UserRole.Client,
-    label: 'Клієнт',
-    description: 'Замовляю товари',
+    label: 'Client',
+    description: 'I buy products',
     icon: '🛍️',
   },
   {
     value: UserRole.Supplier,
-    label: 'Постачальник',
-    description: 'Продаю товари',
+    label: 'Supplier',
+    description: 'I sell products',
     icon: '🏪',
   },
   {
     value: UserRole.Courier,
-    label: 'Кур\'єр',
-    description: 'Доставляю замовлення',
+    label: 'Courier',
+    description: 'I deliver orders',
     icon: '🚴',
   },
 ]
@@ -66,19 +66,19 @@ const validate = (): boolean => {
   let valid = true
 
   if (!form.fullName.trim()) {
-    fieldErrors.fullName = "Введіть повне ім'я"
+    fieldErrors.fullName = "Enter your full name"
     valid = false
   }
   if (!form.email.trim()) {
-    fieldErrors.email = 'Введіть email'
+    fieldErrors.email = 'Enter your email'
     valid = false
   }
   if (!form.password || form.password.length < 6) {
-    fieldErrors.password = 'Мінімум 6 символів'
+    fieldErrors.password = 'Minimum 6 characters'
     valid = false
   }
   if (!form.role) {
-    fieldErrors.role = 'Оберіть роль'
+    fieldErrors.role = 'Select a role'
     valid = false
   }
 
@@ -107,8 +107,8 @@ const handleSubmit = async () => {
   <div>
     <!-- Header -->
     <div class="mb-7">
-      <h1 class="text-2xl font-bold text-gray-900">Створити акаунт</h1>
-      <p class="text-sm text-gray-400 mt-1">Заповніть дані для реєстрації</p>
+      <h1 class="text-2xl font-bold text-gray-900">Create an Account</h1>
+      <p class="text-sm text-gray-400 mt-1">Fill in your registration details</p>
     </div>
 
     <!-- Form -->
@@ -116,8 +116,8 @@ const handleSubmit = async () => {
 
       <AppInput
         v-model="form.fullName"
-        label="Повне ім'я"
-        placeholder="Іван Іваненко"
+        label="Full Name"
+        placeholder="John Doe"
         :error="fieldErrors.fullName"
       />
 
@@ -131,16 +131,16 @@ const handleSubmit = async () => {
 
       <AppInput
         v-model="form.password"
-        label="Пароль"
+        label="Password"
         type="password"
         placeholder="••••••••"
-        helper="Мінімум 6 символів"
+        helper="Minimum 6 characters"
         :error="fieldErrors.password"
       />
 
       <!-- Role picker -->
       <div class="flex flex-col gap-1">
-        <span class="text-sm font-medium text-gray-700">Роль</span>
+        <span class="text-sm font-medium text-gray-700">Role</span>
         <div class="grid grid-cols-3 gap-2">
           <button
             v-for="option in roleOptions"
@@ -181,22 +181,22 @@ const handleSubmit = async () => {
         :loading="authStore.loading"
         class="w-full"
       >
-        Зареєструватися
+        Sign Up
       </AppButton>
     </form>
 
     <!-- Divider -->
     <div class="flex items-center gap-3 my-6">
       <div class="flex-1 h-px bg-gray-100" />
-      <span class="text-xs text-gray-400">або</span>
+      <span class="text-xs text-gray-400">or</span>
       <div class="flex-1 h-px bg-gray-100" />
     </div>
 
     <!-- Link to login -->
     <p class="text-center text-sm text-gray-500">
-      Вже є акаунт?
+      Already have an account?
       <RouterLink to="/login" class="text-blue-600 font-medium hover:underline ml-1">
-        Увійти
+        Sign In
       </RouterLink>
     </p>
   </div>

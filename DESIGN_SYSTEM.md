@@ -1,58 +1,58 @@
 # Design System — Order Flow Logistics
 
-Єдиний стандарт дизайну для всіх фіч проєкту. Будь-який новий компонент, в'ю або лейаут **зобов'язаний** слідувати цьому
+A unified standard дизайну для всіх фіч проєкту. Будь-який новий компонент, в'ю або лейаут **зобов'язаний** слідувати цьому
 документу.
 
 ---
 
-## 1. Принципи
+## 1. Principles
 
-| Принцип         | Суть                                                                    |
+| Principle         | Essence                                                                    |
 |-----------------|-------------------------------------------------------------------------|
-| **Clarity**     | UI не перевантажений. Кожен елемент на сторінці виправданий             |
-| **Consistency** | Однакові дії виглядають однаково в усіх ролях                           |
-| **Hierarchy**   | Найважливіша дія — найвиразніша. Текст читається від великого до малого |
-| **Feedback**    | Кожна дія супроводжується станом: loading / success / error             |
-| **Role-Aware**  | Колір акценту відповідає ролі користувача                               |
+| **Clarity**     | UI is not overloaded. Every element на сторінці виправданий             |
+| **Consistency** | Identical actions виглядають однаково в усіх ролях                           |
+| **Hierarchy**   | The most important action — найвиразніша. Текст читається від великого до малого |
+| **Feedback**    | Every action супроводжується станом: loading / success / error             |
+| **Role-Aware**  | Accent color відповідає ролі користувача                               |
 
 ---
 
-## 2. Кольорова палітра
+## 2. Color Palette
 
-### Базові кольори (нейтральні)
+### Basic Colors (нейтральні)
 
-| Токен          | Клас Tailwind     | Hex     | Використання              |
+| Токен          | Class Tailwind     | Hex     | Usage              |
 |----------------|-------------------|---------|---------------------------|
-| Surface        | `bg-white`        | #ffffff | Картки, модалки, навбар   |
-| Background     | `bg-gray-50`      | #f9fafb | Фон сторінки              |
-| Border         | `border-gray-100` | #f3f4f6 | Розділювачі, картки       |
-| Border Strong  | `border-gray-200` | #e5e7eb | Інпути, навбар            |
-| Text Primary   | `text-gray-900`   | #111827 | Заголовки, основний текст |
-| Text Secondary | `text-gray-600`   | #4b5563 | Підписи, мета-текст       |
-| Text Muted     | `text-gray-400`   | #9ca3af | Плейсхолдери, disabled    |
+| Surface        | `bg-white`        | #ffffff | Cards, modals, navbar   |
+| Background     | `bg-gray-50`      | #f9fafb | Page background              |
+| Border         | `border-gray-100` | #f3f4f6 | Dividers, cards       |
+| Border Strong  | `border-gray-200` | #e5e7eb | Inputs, navbar            |
+| Text Primary   | `text-gray-900`   | #111827 | Headings, main text |
+| Text Secondary | `text-gray-600`   | #4b5563 | Captions, meta text       |
+| Text Muted     | `text-gray-400`   | #9ca3af | Placeholders, disabled    |
 
-### Акцентний (Brand)
+### Accent (Brand)
 
-| Токен         | Клас Tailwind   | Використання                       |
+| Токен         | Class Tailwind   | Usage                       |
 |---------------|-----------------|------------------------------------|
-| Brand         | `blue-600`      | CTA, primary button, активні лінки |
-| Brand Hover   | `blue-700`      | Hover-стан primary                 |
-| Brand Surface | `blue-50`       | Фон підказок, highlighted секцій   |
-| Brand Border  | `blue-100`      | Рамка у blue-tinted картках        |
-| Brand Text    | `text-blue-600` | Активні лінки, labels              |
+| Brand         | `blue-600`      | CTA, primary button, active links |
+| Brand Hover   | `blue-700`      | Hover state primary                 |
+| Brand Surface | `blue-50`       | Tooltip background, highlighted sections   |
+| Brand Border  | `blue-100`      | Border in blue-tinted cards        |
+| Brand Text    | `text-blue-600` | Active links, labels              |
 
-### Семантичні кольори
+### Semantic Colors
 
-| Стан    | bg          | text         | border       |
+| State    | bg          | text         | border       |
 |---------|-------------|--------------|--------------|
 | Success | `green-50`  | `green-700`  | `green-100`  |
 | Warning | `yellow-50` | `yellow-700` | `yellow-100` |
 | Error   | `red-50`    | `red-600`    | `red-100`    |
 | Info    | `blue-50`   | `blue-700`   | `blue-100`   |
 
-### Кольори ролей (Role Theme)
+### Role Colors (Role Theme)
 
-Кожна роль має свій акцентний колір. Використовується у навігації, бейджах та заголовках.
+Each role має свій акцентний колір. Used у навігації, бейджах та заголовках.
 
 | Роль         | bg-subtle   | text         | border       | bg-solid     | text-on-solid |
 |--------------|-------------|--------------|--------------|--------------|---------------|
@@ -63,55 +63,55 @@
 
 ---
 
-## 3. Типографіка
+## 3. Typography
 
-Системний шрифт (Inter / -apple-system / sans-serif). Без кастомного підключення.
+System font (Inter / -apple-system / sans-serif). No custom font loading.
 
-### Шкала заголовків
+### Heading Scale
 
-| Рівень  | Клас                                                           | Розмір | Де використовується         |
+| Level  | Class                                                           | Size | Where Used         |
 |---------|----------------------------------------------------------------|--------|-----------------------------|
 | Display | `text-5xl font-extrabold text-gray-900`                        | 48px   | Landing hero                |
-| H1      | `text-3xl font-bold text-gray-900`                             | 30px   | Назва сторінки (page title) |
-| H2      | `text-xl font-semibold text-gray-900`                          | 20px   | Заголовок секції або картки |
-| H3      | `text-base font-semibold text-gray-900`                        | 16px   | Заголовок елемента списку   |
-| Label   | `text-xs font-semibold uppercase tracking-wider text-gray-500` | 12px   | Підписи полів, категорії    |
+| H1      | `text-3xl font-bold text-gray-900`                             | 30px   | Page title (page title) |
+| H2      | `text-xl font-semibold text-gray-900`                          | 20px   | Section or card heading |
+| H3      | `text-base font-semibold text-gray-900`                        | 16px   | List element heading   |
+| Label   | `text-xs font-semibold uppercase tracking-wider text-gray-500` | 12px   | Field labels, categories    |
 
-### Шкала тексту
+### Text Scale
 
-| Рівень  | Клас                                    | Де використовується   |
+| Level  | Class                                    | Where Used   |
 |---------|-----------------------------------------|-----------------------|
-| Body    | `text-sm text-gray-600`                 | Основний контент      |
-| Caption | `text-xs text-gray-400`                 | Мета-дані, timestamps |
-| Link    | `text-sm text-blue-600 hover:underline` | Клікабельні лінки     |
+| Body    | `text-sm text-gray-600`                 | Main content      |
+| Caption | `text-xs text-gray-400`                 | Meta-data, timestamps |
+| Link    | `text-sm text-blue-600 hover:underline` | Clickable links     |
 
 ---
 
-## 4. Відступи (Spacing)
+## 4. Spacing (Spacing)
 
-Базова одиниця = **4px** (Tailwind: `1 unit = 0.25rem`).
+Base unit = **4px** (Tailwind: `1 unit = 0.25rem`).
 
 | Назва                    | Значення | Де                               |
 |--------------------------|----------|----------------------------------|
 | `gap-1`                  | 4px      | Tight groups (icon + text)       |
-| `gap-2`                  | 8px      | Пара елементів                   |
+| `gap-2`                  | 8px      | Element pairs                   |
 | `gap-3`                  | 12px     | List items                       |
-| `gap-4`                  | 16px     | Форми, картки всередині          |
-| `gap-6`                  | 24px     | Навбар, секції всередині         |
+| `gap-4`                  | 16px     | Forms, cards within          |
+| `gap-6`                  | 24px     | Navbar, sections within         |
 | `gap-8`                  | 32px     | Між великими блоками             |
 | `py-8` / `px-6`          |          | Внутрішній padding main-контенту |
 | `py-20`                  |          | Padding великих лендінг-секцій   |
-| `max-w-6xl mx-auto px-6` |          | Стандартний контейнер            |
+| `max-w-6xl mx-auto px-6` |          | Stateдартний контейнер            |
 | `max-w-md`               |          | Форми авторизації                |
 
 ---
 
 ## 5. Закруглення (Border Radius)
 
-| Клас           | Де                                 |
+| Class           | Де                                 |
 |----------------|------------------------------------|
 | `rounded-lg`   | Інпути, маленькі кнопки            |
-| `rounded-xl`   | Стандартні кнопки, тех-стек картки |
+| `rounded-xl`   | Stateдартні кнопки, тех-стек картки |
 | `rounded-2xl`  | Картки (cards)                     |
 | `rounded-full` | Бейджі-пілюлі, аватари, індикатори |
 
@@ -121,7 +121,7 @@
 
 Мінімалістичне використання. Тінь — це сигнал інтерактивності або elevation.
 
-| Клас              | Де                         |
+| Class              | Де                         |
 |-------------------|----------------------------|
 | `shadow-sm`       | Картки у спокої (статичні) |
 | `hover:shadow-md` | Картки при hover           |
@@ -137,28 +137,28 @@
 
 #### Варіанти
 
-| Variant     | Вигляд                 | Клас                                                             |
+| Variant     | Вигляд                 | Class                                                             |
 |-------------|------------------------|------------------------------------------------------------------|
 | `primary`   | Синій фон, білий текст | `bg-blue-600 hover:bg-blue-700 text-white`                       |
 | `secondary` | Білий, сіра рамка      | `bg-white border border-gray-200 hover:bg-gray-50 text-gray-700` |
 | `ghost`     | Без фону               | `text-gray-600 hover:bg-gray-100 hover:text-gray-900`            |
 | `danger`    | Червоний               | `bg-red-600 hover:bg-red-700 text-white`                         |
 
-#### Розміри
+#### Sizeи
 
-| Size           | Клас                             |
+| Size           | Class                             |
 |----------------|----------------------------------|
 | `sm`           | `text-sm px-3 py-1.5 rounded-lg` |
 | `md` (default) | `text-sm px-4 py-2 rounded-xl`   |
 | `lg`           | `text-base px-6 py-3 rounded-xl` |
 
-#### Стани
+#### Stateи
 
 - `disabled`: `opacity-50 cursor-not-allowed`
 - `loading`: іконка спінера замість тексту, `disabled`
 
 ```vue
-<!-- Використання -->
+<!-- Usage -->
 <AppButton>Зберегти</AppButton>
 <AppButton variant="secondary">Скасувати</AppButton>
 <AppButton variant="danger" size="sm">Видалити</AppButton>
@@ -179,7 +179,7 @@
 - Helper text: `text-xs text-gray-400 mt-1`
 
 ```vue
-<!-- Використання -->
+<!-- Usage -->
 <AppInput v-model="email" label="Email" type="email" placeholder="user@example.com" />
 <AppInput v-model="password" label="Пароль" type="password" :error="errors.password" />
 <AppInput v-model="price" label="Ціна" type="number" helper="В гривнях" />
@@ -193,7 +193,7 @@
 
 Маленький статусний бейдж. Не клікабельний.
 
-| Variant   | Клас                           |
+| Variant   | Class                           |
 |-----------|--------------------------------|
 | `default` | `bg-gray-100 text-gray-600`    |
 | `blue`    | `bg-blue-50 text-blue-700`     |
@@ -206,7 +206,7 @@
 Базовий клас: `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium`
 
 ```vue
-<!-- Використання -->
+<!-- Usage -->
 <AppBadge variant="green">ACCEPTED</AppBadge>
 <AppBadge variant="yellow">PENDING</AppBadge>
 <AppBadge variant="blue">READY</AppBadge>
@@ -225,7 +225,7 @@
 - Footer: `flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100`
 
 ```vue
-<!-- Використання -->
+<!-- Usage -->
 <AppModal v-model="isOpen" title="Призначити кур'єра">
   <template #default><!-- content --></template>
   <template #footer>
@@ -241,10 +241,10 @@
 
 **Файл:** `src/components/common/AppSpinner.vue`
 
-SVG-анімація. Розміри: `sm` (16px), `md` (24px, default), `lg` (40px).
+SVG-анімація. Sizeи: `sm` (16px), `md` (24px, default), `lg` (40px).
 
 ```vue
-<!-- Використання -->
+<!-- Usage -->
 <AppSpinner />
 <AppSpinner size="lg" class="text-blue-600" />
 ```
@@ -281,7 +281,7 @@ bg-white border-b border-gray-200 sticky top-0 z-10
 - Nav-link inactive: `text-sm text-gray-500 hover:text-gray-900 transition-colors`
 - Nav-link active: `text-sm text-blue-600 font-medium`
 
-### Основний контент (Main)
+### Main content (Main)
 
 ```
 bg-gray-50 min-h-screen
@@ -345,7 +345,7 @@ bg-gray-50 min-h-screen
 
 ## 10. Картки (Cards)
 
-### Стандартна картка
+### Stateдартна картка
 
 ```html
 
@@ -418,12 +418,12 @@ bg-gray-50 min-h-screen
 
 ## 13. Анімації та переходи
 
-| Клас                 | Де                                   |
+| Class                 | Де                                   |
 |----------------------|--------------------------------------|
 | `transition-colors`  | Зміна кольору (hover кнопок, лінків) |
 | `transition-shadow`  | Hover карток                         |
 | `transition-opacity` | Show/hide елементи                   |
-| `duration-200`       | Стандартна тривалість                |
+| `duration-200`       | Stateдартна тривалість                |
 | `animate-pulse`      | Індикатори активного стану           |
 | `animate-spin`       | AppSpinner                           |
 
