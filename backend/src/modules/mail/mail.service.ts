@@ -27,4 +27,31 @@ export class MailService {
       },
     });
   }
+
+  async sendCourierAssigned(
+    email: string,
+    courierName: string,
+    orderId: number,
+    organizationName: string,
+    deliveryAddress: string,
+    totalAmount: number,
+    itemCount: number,
+  ): Promise<void> {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    await this.mailerService.sendMail({
+      to: email,
+      subject: `📦 New Delivery Order #${orderId} Assigned`,
+      template: './courier-assigned',
+      context: {
+        courierName,
+        orderId,
+        organizationName,
+        deliveryAddress,
+        totalAmount,
+        itemCount,
+        dashboardUrl: `${frontendUrl}/courier/deliveries`,
+        year: new Date().getFullYear(),
+      },
+    });
+  }
 }

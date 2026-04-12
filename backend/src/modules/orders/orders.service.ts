@@ -17,11 +17,13 @@ import {
   OrderStatus,
 } from '../../common/enums/order-status.enum';
 import { Role } from '../../common/enums/role.enum';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class OrdersService {
   constructor(
     @Inject(DATABASE_CONNECTION) private db: NodePgDatabase<typeof schema>,
+    private readonly mailService: MailService,
   ) {}
 
   async create(dto: CreateOrderDto, clientId: number) {
@@ -172,7 +174,7 @@ export class OrdersService {
     }
 
     const [courier] = await this.db
-      .select({ id: schema.users.id, role: schema.users.role })
+      .select()
       .from(schema.users)
       .where(eq(schema.users.id, dto.courierId));
 
@@ -180,11 +182,33 @@ export class OrdersService {
       throw new BadRequestException('User is not a courier');
     }
 
+    // Get order items count
+    const items = await this.db
+      .select()
+      .from(schema.orderItems)
+      .where(eq(schema.orderItems.orderId, orderId));
+
     const [updated] = await this.db
       .update(schema.orders)
       .set({ courierId: dto.courierId })
       .where(eq(schema.orders.id, orderId))
       .returning();
+
+    // Send email to courier
+    try {
+      await this.mailService.sendCourierAssigned(
+        courier.email,
+        courier.fullName || 'Courier',
+        orderId,
+        row.organizations.name,
+        row.orders.deliveryAddress,
+        row.orders.totalAmount,
+        items.length,
+      );
+    } catch (error) {
+      // Log error but don't fail the order assignment
+      console.error('Failed to send courier assignment email:', error);
+    }
 
     return updated;
   }
