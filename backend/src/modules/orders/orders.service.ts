@@ -2,9 +2,11 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { and, eq, inArray } from 'drizzle-orm';
 import * as schema from '../../database/schema';
@@ -18,12 +20,17 @@ import {
 } from '../../common/enums/order-status.enum';
 import { Role } from '../../common/enums/role.enum';
 import { MailService } from '../mail/mail.service';
+import { OrderReadyEvent } from '../courier-assignment/courier-assignment.service';
+import { ORDER_EVENTS } from '../../common/events/order.events';
 
 @Injectable()
 export class OrdersService {
+  private readonly logger = new Logger(OrdersService.name);
+
   constructor(
     @Inject(DATABASE_CONNECTION) private db: NodePgDatabase<typeof schema>,
     private readonly mailService: MailService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   async create(dto: CreateOrderDto, clientId: number) {
@@ -141,6 +148,26 @@ export class OrdersService {
       .where(eq(schema.orders.id, orderId))
       .returning();
 
+    if (dto.status === OrderStatus.READY_FOR_DELIVERY) {
+      const org = row.organizations;
+      if (org.lat && org.lng) {
+        const event: OrderReadyEvent = {
+          orderId: updated.id,
+          organizationId: org.id,
+          orgLat: parseFloat(org.lat),
+          orgLng: parseFloat(org.lng),
+          orgName: org.name,
+          deliveryAddress: updated.deliveryAddress,
+          totalAmount: updated.totalAmount,
+        };
+        this.eventEmitter.emit(ORDER_EVENTS.READY_FOR_DELIVERY, event);
+      } else {
+        this.logger.warn(
+          `Organization #${org.id} has no coordinates — skipping auto-assignment for order #${updated.id}`,
+        );
+      }
+    }
+
     return updated;
   }
 
@@ -229,18 +256,14 @@ export class OrdersService {
     }
 
     if (order.status !== OrderStatus.PENDING) {
-      throw new BadRequestException(
-        'Only pending orders can be cancelled',
-      );
+      throw new BadRequestException('Only pending orders can be cancelled');
     }
 
     await this.db.transaction(async (tx) => {
       await tx
         .delete(schema.orderItems)
         .where(eq(schema.orderItems.orderId, orderId));
-      await tx
-        .delete(schema.orders)
-        .where(eq(schema.orders.id, orderId));
+      await tx.delete(schema.orders).where(eq(schema.orders.id, orderId));
     });
 
     return order;
