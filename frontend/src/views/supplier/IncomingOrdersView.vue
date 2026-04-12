@@ -199,7 +199,12 @@ onMounted(async () => {
 
         <!-- Actions -->
         <div class="flex items-center justify-end gap-2 pt-1 border-t border-gray-50">
-          <AppButton variant="secondary" size="sm" @click="openAssignModal(order)">
+          <AppButton
+            v-if="order.status === OrderStatus.ReadyForDelivery"
+            variant="secondary"
+            size="sm"
+            @click="openAssignModal(order)"
+          >
             {{ order.courierId ? 'Change courier' : 'Assign courier' }}
           </AppButton>
           <AppButton
