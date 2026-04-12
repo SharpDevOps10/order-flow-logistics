@@ -5,5 +5,6 @@ import { CourierGateway } from './courier.gateway';
 @Module({
   imports: [JwtModule.register({})],
   providers: [CourierGateway],
+  exports: [CourierGateway],
 })
 export class CourierGatewayModule {}

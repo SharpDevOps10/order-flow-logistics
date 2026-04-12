@@ -3,6 +3,7 @@ import {
   ConnectedSocket,
   MessageBody,
   OnGatewayConnection,
+  OnGatewayDisconnect,
   SubscribeMessage,
   WebSocketGateway,
 } from '@nestjs/websockets';
@@ -20,6 +21,10 @@ interface LocationPayload {
   lng: number;
 }
 
+interface ServerToClientEvents {
+  'order:assigned': (payload: { orderId: number }) => void;
+}
+
 interface SocketData {
   userId: number;
   role: Role;
@@ -27,14 +32,17 @@ interface SocketData {
 
 type CourierSocket = Socket<
   Record<string, never>,
-  Record<string, never>,
+  ServerToClientEvents,
   Record<string, never>,
   SocketData
 >;
 
 @WebSocketGateway({ cors: { origin: '*' } })
-export class CourierGateway implements OnGatewayConnection {
+export class CourierGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   private readonly logger = new Logger(CourierGateway.name);
+  private readonly clients = new Map<number, CourierSocket>();
 
   constructor(
     private readonly jwtService: JwtService,
@@ -61,9 +69,25 @@ export class CourierGateway implements OnGatewayConnection {
       client.data.userId = payload.sub;
       client.data.role = payload.role as Role;
 
+      this.clients.set(payload.sub, client);
       this.logger.log(`Courier #${payload.sub} connected`);
     } catch {
       client.disconnect();
+    }
+  }
+
+  handleDisconnect(client: CourierSocket) {
+    if (client.data.userId) {
+      this.clients.delete(client.data.userId);
+      this.logger.log(`Courier #${client.data.userId} disconnected`);
+    }
+  }
+
+  notifyCourier(courierId: number, orderId: number): void {
+    const client = this.clients.get(courierId);
+    if (client) {
+      client.emit('order:assigned', { orderId });
+      this.logger.log(`Notified courier #${courierId} about order #${orderId}`);
     }
   }
 

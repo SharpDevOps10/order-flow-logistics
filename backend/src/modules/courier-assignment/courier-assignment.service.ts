@@ -8,6 +8,7 @@ import { RedisService } from '../redis/redis.service';
 import { MailService } from '../mail/mail.service';
 import { Role } from '../../common/enums/role.enum';
 import { ORDER_EVENTS } from '../../common/events/order.events';
+import { CourierGateway } from '../courier-gateway/courier.gateway';
 import { OrderStatus } from '../../common/enums/order-status.enum';
 import { haversineKm } from '../routing/dijkstra';
 
@@ -35,6 +36,7 @@ export class CourierAssignmentService {
     private readonly db: NodePgDatabase<typeof schema>,
     private readonly redisService: RedisService,
     private readonly mailService: MailService,
+    private readonly courierGateway: CourierGateway,
   ) {}
 
   @OnEvent(ORDER_EVENTS.READY_FOR_DELIVERY)
@@ -132,6 +134,8 @@ export class CourierAssignmentService {
       .update(schema.orders)
       .set({ courierId: best.courier.id })
       .where(eq(schema.orders.id, event.orderId));
+
+    this.courierGateway.notifyCourier(best.courier.id, event.orderId);
 
     const items = await this.db
       .select()
