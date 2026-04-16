@@ -2,9 +2,12 @@
 import { RouterView, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.store'
 import { useRouter } from 'vue-router'
+import { useCourierSocket } from '@/composables/useCourierSocket'
 
 const authStore = useAuthStore()
 const router = useRouter()
+
+useCourierSocket()
 
 const handleLogout = async () => {
   await authStore.logout()
