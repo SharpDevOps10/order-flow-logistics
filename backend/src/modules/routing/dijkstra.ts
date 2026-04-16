@@ -4,7 +4,7 @@ export interface GraphNode {
   lng: number;
 }
 
-interface Edge {
+export interface Edge {
   to: number;
   weight: number;
 }
@@ -87,10 +87,6 @@ export function buildCompleteGraph(nodes: GraphNode[]): Map<number, Edge[]> {
   return adj;
 }
 
-/**
- * Classic Dijkstra's algorithm on a weighted graph.
- * Returns a map of nodeId → shortest distance from the source node.
- */
 export function dijkstra(
   nodes: GraphNode[],
   adj: Map<number, Edge[]>,
@@ -119,13 +115,117 @@ export function dijkstra(
   return dist;
 }
 
-/**
- * Greedy nearest-neighbour route optimizer powered by Dijkstra.
- * Starting from the pickup node, repeatedly picks the closest unvisited
- * delivery node (using Dijkstra distances) until all are visited.
- *
- * Returns an ordered array of node IDs representing the optimised route.
- */
+export interface OsmNode {
+  id: number;
+  lat: number;
+  lng: number;
+}
+
+export interface OsmWay {
+  id: number;
+  nodes: number[];
+  oneway: boolean;
+}
+
+export function buildOsmGraph(
+  osmNodes: OsmNode[],
+  osmWays: OsmWay[],
+): { nodes: GraphNode[]; adj: Map<number, Edge[]> } {
+  const nodeMap = new Map<number, OsmNode>();
+  for (const n of osmNodes) nodeMap.set(n.id, n);
+
+  const nodes: GraphNode[] = osmNodes.map((n) => ({
+    id: n.id,
+    lat: n.lat,
+    lng: n.lng,
+  }));
+
+  const adj = new Map<number, Edge[]>();
+  for (const n of nodes) adj.set(n.id, []);
+
+  for (const way of osmWays) {
+    for (let i = 0; i < way.nodes.length - 1; i++) {
+      const aId = way.nodes[i];
+      const bId = way.nodes[i + 1];
+      const a = nodeMap.get(aId);
+      const b = nodeMap.get(bId);
+      if (!a || !b) continue;
+
+      const weight = haversineKm(a, b);
+      adj.get(aId)?.push({ to: bId, weight });
+      if (!way.oneway) {
+        adj.get(bId)?.push({ to: aId, weight });
+      }
+    }
+  }
+
+  return { nodes, adj };
+}
+
+export function findNearestNode(
+  nodes: GraphNode[],
+  lat: number,
+  lng: number,
+): GraphNode {
+  const target = { id: 0, lat, lng };
+  let nearest = nodes[0];
+  let minDist = haversineKm(nearest, target);
+  for (const n of nodes) {
+    const d = haversineKm(n, target);
+    if (d < minDist) {
+      minDist = d;
+      nearest = n;
+    }
+  }
+  return nearest;
+}
+
+export function dijkstraWithPath(
+  nodes: GraphNode[],
+  adj: Map<number, Edge[]>,
+  sourceId: number,
+): { distances: Map<number, number>; prev: Map<number, number | null> } {
+  const distances = new Map<number, number>();
+  const prev = new Map<number, number | null>();
+  for (const n of nodes) {
+    distances.set(n.id, Infinity);
+    prev.set(n.id, null);
+  }
+  distances.set(sourceId, 0);
+
+  const pq = new MinHeap();
+  pq.push({ id: sourceId, dist: 0 });
+
+  while (pq.size > 0) {
+    const { id: u, dist: uDist } = pq.pop()!;
+    if (uDist > distances.get(u)!) continue;
+
+    for (const edge of adj.get(u) ?? []) {
+      const alt = distances.get(u)! + edge.weight;
+      if (alt < distances.get(edge.to)!) {
+        distances.set(edge.to, alt);
+        prev.set(edge.to, u);
+        pq.push({ id: edge.to, dist: alt });
+      }
+    }
+  }
+
+  return { distances, prev };
+}
+
+export function reconstructPath(
+  prev: Map<number, number | null>,
+  targetId: number,
+): number[] {
+  const path: number[] = [];
+  let current: number | null = targetId;
+  while (current !== null) {
+    path.unshift(current);
+    current = prev.get(current) ?? null;
+  }
+  return path;
+}
+
 export function optimizeRoute(
   nodes: GraphNode[],
   adj: Map<number, Edge[]>,
@@ -151,7 +251,7 @@ export function optimizeRoute(
       }
     }
 
-    if (nearestId === -1) break; // unreachable nodes (no coords)
+    if (nearestId === -1) break;
 
     route.push(nearestId);
     unvisited.delete(nearestId);

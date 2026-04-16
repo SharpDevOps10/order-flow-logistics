@@ -85,19 +85,21 @@ function renderRoutes() {
       layerGroup!.addLayer(marker)
     })
 
-    // Draw polyline for this route
-    if (latlngs.length > 1) {
-      const polyline = L.polyline(latlngs, {
+    const polylineCoords: L.LatLngExpression[] =
+      route.geometry && route.geometry.length > 1
+        ? route.geometry.map(([lat, lng]) => L.latLng(lat, lng))
+        : latlngs
+
+    if (polylineCoords.length > 1) {
+      const polyline = L.polyline(polylineCoords, {
         color,
         weight: 4,
         opacity: 0.8,
-        dashArray: undefined,
       })
       layerGroup!.addLayer(polyline)
     }
   })
 
-  // Fit map to show all markers
   if (allLatLngs.length > 0) {
     map.fitBounds(L.latLngBounds(allLatLngs), { padding: [40, 40] })
   }

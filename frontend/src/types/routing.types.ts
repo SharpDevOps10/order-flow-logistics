@@ -13,4 +13,5 @@ export interface RouteWaypoint {
 export interface OptimizedRoute {
   totalDistanceKm: number
   waypoints: RouteWaypoint[]
+  geometry: [number, number][] | null
 }
