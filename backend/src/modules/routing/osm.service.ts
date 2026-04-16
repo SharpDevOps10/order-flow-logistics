@@ -66,7 +66,7 @@ export class OsmService {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'Referer': 'https://order-flow-logistics.app/',
+            Referer: 'https://order-flow-logistics.app/',
             'User-Agent': 'OrderFlowLogistics/1.0 (diploma project)',
           },
           body: `data=${encodeURIComponent(query)}`,
@@ -112,11 +112,15 @@ export class OsmService {
 
         return { nodes, ways };
       } catch (err) {
-        this.logger.warn(`${endpoint} failed: ${(err as Error).message} — trying next`);
+        this.logger.warn(
+          `${endpoint} failed: ${(err as Error).message} — trying next`,
+        );
       }
     }
 
-    this.logger.error('All Overpass endpoints failed — falling back to Haversine routing');
+    this.logger.error(
+      'All Overpass endpoints failed — falling back to Haversine routing',
+    );
     return null;
   }
 }

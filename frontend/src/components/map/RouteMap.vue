@@ -10,7 +10,13 @@ const props = defineProps<{
 let map: L.Map | null = null
 let layerGroup: L.LayerGroup | null = null
 
-const ROUTE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444']
+/** Colors rotated per segment (pickup→stop1, stop1→stop2, …). */
+const SEGMENT_COLORS = [
+  '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444',
+  '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16',
+]
+
+const segmentColor = (i: number) => SEGMENT_COLORS[i % SEGMENT_COLORS.length]
 
 function buildPickupIcon() {
   return L.divIcon({
@@ -52,19 +58,20 @@ function renderRoutes() {
 
   const allLatLngs: L.LatLng[] = []
 
-  props.routes.forEach((route, routeIndex) => {
-    const color = ROUTE_COLORS[routeIndex % ROUTE_COLORS.length]
+  props.routes.forEach((route) => {
     const latlngs: L.LatLng[] = []
-    let stopCounter = 0
 
     route.waypoints.forEach((wp, wpIndex) => {
       const ll = L.latLng(wp.lat, wp.lng)
       latlngs.push(ll)
       allLatLngs.push(ll)
 
+      // Marker for stop N takes the color of the segment that arrives at it (segment N-1).
+      const arrivingColor = wpIndex > 0 ? segmentColor(wpIndex - 1) : '#f97316'
+
       const popupContent = `
         <div style="font-family:sans-serif;min-width:160px">
-          <p style="font-size:11px;font-weight:600;color:${wp.type === 'PICKUP' ? '#f97316' : color};margin:0 0 4px">
+          <p style="font-size:11px;font-weight:600;color:${arrivingColor};margin:0 0 4px">
             ${wp.type === 'PICKUP' ? 'Pickup' : `Stop ${wpIndex}`}
             ${wp.orderId ? `· Order #${wp.orderId}` : ''}
           </p>
@@ -78,25 +85,32 @@ function renderRoutes() {
       if (wp.type === 'PICKUP') {
         marker = L.marker(ll, { icon: buildPickupIcon() })
       } else {
-        stopCounter++
-        marker = L.marker(ll, { icon: buildStopIcon(wpIndex, color) })
+        marker = L.marker(ll, { icon: buildStopIcon(wpIndex, arrivingColor) })
       }
       marker.bindPopup(popupContent)
       layerGroup!.addLayer(marker)
     })
 
-    const polylineCoords: L.LatLngExpression[] =
-      route.geometry && route.geometry.length > 1
-        ? route.geometry.map(([lat, lng]) => L.latLng(lat, lng))
-        : latlngs
-
-    if (polylineCoords.length > 1) {
-      const polyline = L.polyline(polylineCoords, {
-        color,
-        weight: 4,
-        opacity: 0.8,
+    // Draw each segment with its own color.
+    if (route.geometry && route.geometry.length > 0) {
+      route.geometry.forEach((segment, i) => {
+        if (segment.length < 2) return
+        const coords = segment.map(([lat, lng]) => L.latLng(lat, lng))
+        L.polyline(coords, {
+          color: segmentColor(i),
+          weight: 4,
+          opacity: 0.85,
+        }).addTo(layerGroup!)
       })
-      layerGroup!.addLayer(polyline)
+    } else {
+      // Fallback: straight lines between consecutive waypoints, one color per segment.
+      for (let i = 0; i < latlngs.length - 1; i++) {
+        L.polyline([latlngs[i], latlngs[i + 1]], {
+          color: segmentColor(i),
+          weight: 4,
+          opacity: 0.85,
+        }).addTo(layerGroup!)
+      }
     }
   })
 

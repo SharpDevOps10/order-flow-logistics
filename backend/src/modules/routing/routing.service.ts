@@ -36,7 +36,8 @@ export interface RoutePoint {
 export interface OptimizedRoute {
   totalDistanceKm: number;
   waypoints: RoutePoint[];
-  geometry: [number, number][] | null;
+  /** Road geometry grouped by segment (waypoint-to-waypoint), each as [lat, lng] pairs. */
+  geometry: [number, number][][] | null;
 }
 
 function orgNodeId(orgId: number): number {
@@ -143,7 +144,7 @@ export class RoutingService {
 
       let orderedLogicalIds: number[];
       let segmentDistancesKm: number[];
-      let geometry: [number, number][] | null = null;
+      let geometry: [number, number][][] | null = null;
 
       if (osmGraph) {
         const snapToOsm = (lat: number, lng: number) =>
@@ -177,7 +178,7 @@ export class RoutingService {
         );
 
         segmentDistancesKm = [0];
-        const geomCoords: [number, number][] = [];
+        const segments: [number, number][][] = [];
 
         for (let i = 0; i < orderedOsmIds.length - 1; i++) {
           const fromId = orderedOsmIds[i];
@@ -200,14 +201,15 @@ export class RoutingService {
           );
 
           const path = reconstructPath(prev, toId);
-          const startIdx = i === 0 ? 0 : 1;
-          for (let j = startIdx; j < path.length; j++) {
-            const coord = osmNodeCoordMap.get(path[j]);
-            if (coord) geomCoords.push([coord.lat, coord.lng]);
+          const segmentCoords: [number, number][] = [];
+          for (const nodeId of path) {
+            const coord = osmNodeCoordMap.get(nodeId);
+            if (coord) segmentCoords.push([coord.lat, coord.lng]);
           }
+          if (segmentCoords.length > 1) segments.push(segmentCoords);
         }
 
-        geometry = geomCoords.length > 1 ? geomCoords : null;
+        geometry = segments.length > 0 ? segments : null;
       } else {
         const adj = buildCompleteGraph(allNodes);
         orderedLogicalIds = optimizeRoute(
