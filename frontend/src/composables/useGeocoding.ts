@@ -13,30 +13,78 @@ interface NominatimResult {
 
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org'
 
+/** TTL for geocoding cache entries (30 days — addresses rarely move). */
+const GEO_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000
+
+interface CachedEntry<T> {
+  value: T
+  expiresAt: number
+}
+
+function readCache<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    const entry = JSON.parse(raw) as CachedEntry<T>
+    if (Date.now() > entry.expiresAt) {
+      localStorage.removeItem(key)
+      return null
+    }
+    return entry.value
+  } catch {
+    return null
+  }
+}
+
+function writeCache<T>(key: string, value: T): void {
+  try {
+    const entry: CachedEntry<T> = { value, expiresAt: Date.now() + GEO_CACHE_TTL_MS }
+    localStorage.setItem(key, JSON.stringify(entry))
+  } catch {
+    // Ignore quota / private-mode errors — cache is best-effort.
+  }
+}
+
+const fwdKey = (address: string) => `geo:fwd:${address.trim().toLowerCase()}`
+// Round to 4 decimals (~11 m) so nearby reverse lookups share a cache entry.
+const revKey = (lat: number, lng: number) => `geo:rev:${lat.toFixed(4)},${lng.toFixed(4)}`
+
 export const useGeocoding = () => {
   const isLocating = ref(false)
   const isGeocoding = ref(false)
   const locationError = ref('')
 
   const reverseGeocode = async (lat: number, lng: number): Promise<{ address: string; coords: Coordinates } | null> => {
+    const key = revKey(lat, lng)
+    const cached = readCache<{ address: string; coords: Coordinates }>(key)
+    if (cached) return cached
+
     const url = `${NOMINATIM_BASE}/reverse?lat=${lat}&lon=${lng}&format=json`
     const res = await fetch(url, { headers: { 'Accept-Language': 'en' } })
     if (!res.ok) return null
     const data = (await res.json()) as NominatimResult
-    return {
+    const result = {
       address: data.display_name,
       coords: { lat: String(lat), lng: String(lng) },
     }
+    writeCache(key, result)
+    return result
   }
 
   const forwardGeocode = async (address: string): Promise<Coordinates | null> => {
+    const key = fwdKey(address)
+    const cached = readCache<Coordinates>(key)
+    if (cached) return cached
+
     const query = encodeURIComponent(address)
     const url = `${NOMINATIM_BASE}/search?q=${query}&format=json&limit=1`
     const res = await fetch(url, { headers: { 'Accept-Language': 'en' } })
     if (!res.ok) return null
     const data = (await res.json()) as NominatimResult[]
     if (!data.length) return null
-    return { lat: data[0].lat, lng: data[0].lon }
+    const result = { lat: data[0].lat, lng: data[0].lon }
+    writeCache(key, result)
+    return result
   }
 
   const detectLocation = async (): Promise<{ address: string; coords: Coordinates } | null> => {
