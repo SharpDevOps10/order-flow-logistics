@@ -3,6 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { OrderEventsPublisher } from './order-events.publisher';
 import { ORDER_EVENTS_CLIENT } from './messaging.tokens';
+import { DlqService } from './dlq.service';
+import { DlqController } from './dlq.controller';
 
 @Global()
 @Module({
@@ -17,13 +19,21 @@ import { ORDER_EVENTS_CLIENT } from './messaging.tokens';
           options: {
             urls: [config.get<string>('RABBITMQ_URL')!],
             queue: config.get<string>('RABBITMQ_QUEUE')!,
-            queueOptions: { durable: true },
+            queueOptions: {
+              durable: true,
+              arguments: {
+                'x-dead-letter-exchange': '',
+                'x-dead-letter-routing-key':
+                  config.get<string>('RABBITMQ_DLQ') ?? 'order-events.dlq',
+              },
+            },
           },
         }),
       },
     ]),
   ],
-  providers: [OrderEventsPublisher],
-  exports: [OrderEventsPublisher],
+  controllers: [DlqController],
+  providers: [OrderEventsPublisher, DlqService],
+  exports: [OrderEventsPublisher, DlqService],
 })
 export class MessagingModule {}

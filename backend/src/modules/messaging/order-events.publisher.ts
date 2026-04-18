@@ -17,7 +17,9 @@ export class OrderEventsPublisher {
   ) {}
 
   publishReadyForDelivery(event: OrderReadyEvent): void {
-    this.logger.log(`Publishing READY_FOR_DELIVERY for order #${event.orderId}`);
+    this.logger.log(
+      `Publishing READY_FOR_DELIVERY for order #${event.orderId}`,
+    );
     this.client.emit(ORDER_EVENTS.READY_FOR_DELIVERY, event);
   }
 }
