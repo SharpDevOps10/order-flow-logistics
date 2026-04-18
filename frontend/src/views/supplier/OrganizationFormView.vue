@@ -94,8 +94,7 @@ onMounted(() => {
 <template>
   <div class="max-w-lg">
 
-    <!-- Header -->
-    <div class="flex items-center gap-3 mb-8">
+        <div class="flex items-center gap-3 mb-8">
       <button
         class="text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-lg hover:bg-gray-100"
         @click="goBack"
@@ -114,8 +113,7 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Form -->
-    <form
+        <form
       class="bg-white border border-gray-100 rounded-2xl p-6 flex flex-col gap-5"
       @submit.prevent="handleSubmit"
     >
@@ -132,8 +130,7 @@ onMounted(() => {
         placeholder="e.g. Kyiv region"
       />
 
-      <!-- Address field -->
-      <div class="flex flex-col gap-1">
+            <div class="flex flex-col gap-1">
         <label class="text-sm font-medium text-gray-700">Organization Address</label>
         <div class="flex gap-2">
           <input
@@ -144,8 +141,7 @@ onMounted(() => {
             :class="addressError ? 'border-red-400 focus:ring-red-400' : 'border-gray-200 focus:ring-blue-500'"
             @input="coords = null"
           />
-          <!-- Find coords button (shown when address typed manually) -->
-          <button
+                    <button
             v-if="address && !coords"
             class="flex-shrink-0 flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-300 hover:bg-blue-50 px-3 py-2 rounded-xl transition-colors disabled:opacity-50"
             :disabled="isGeocoding"
@@ -164,8 +160,7 @@ onMounted(() => {
         <p v-if="addressError" class="text-xs text-red-500">{{ addressError }}</p>
       </div>
 
-      <!-- Use my location button -->
-      <button
+            <button
         class="self-start flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-gray-300 hover:bg-gray-50 px-3 py-2 rounded-xl transition-colors disabled:opacity-50"
         :disabled="isLocating"
         type="button"
@@ -180,8 +175,7 @@ onMounted(() => {
         Use my current location
       </button>
 
-      <!-- Coords indicator -->
-      <div
+            <div
         v-if="coords"
         class="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-100 rounded-xl px-3 py-2"
       >
@@ -191,8 +185,7 @@ onMounted(() => {
         Coordinates detected: {{ Number(coords.lat).toFixed(5) }}, {{ Number(coords.lng).toFixed(5) }}
       </div>
 
-      <!-- Location error -->
-      <p v-if="locationError" class="text-xs text-red-500">{{ locationError }}</p>
+            <p v-if="locationError" class="text-xs text-red-500">{{ locationError }}</p>
 
       <div class="flex items-center justify-end gap-3 pt-2">
         <AppButton variant="secondary" type="button" @click="goBack">

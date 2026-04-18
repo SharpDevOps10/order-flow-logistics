@@ -149,8 +149,6 @@ export class OrdersService {
       .where(eq(schema.orders.id, orderId))
       .returning();
 
-    // Any status change affects whether this order appears in the courier's
-    // optimised route (only READY_FOR_DELIVERY orders are included).
     if (updated.courierId) {
       await this.routingService.invalidateCourierRoute(updated.courierId);
     }
@@ -216,7 +214,6 @@ export class OrdersService {
       throw new BadRequestException('User is not a courier');
     }
 
-    // Get order items count
     const items = await this.db
       .select()
       .from(schema.orderItems)
@@ -230,14 +227,11 @@ export class OrdersService {
       .where(eq(schema.orders.id, orderId))
       .returning();
 
-    // Invalidate the new courier's route cache, and the previous one if
-    // this is a reassignment, so both get fresh data next request.
     await this.routingService.invalidateCourierRoute(dto.courierId);
     if (previousCourierId && previousCourierId !== dto.courierId) {
       await this.routingService.invalidateCourierRoute(previousCourierId);
     }
 
-    // Send email to courier
     try {
       await this.mailService.sendCourierAssigned(
         courier.email,
@@ -249,7 +243,6 @@ export class OrdersService {
         items.length,
       );
     } catch (error) {
-      // Log error but don't fail the order assignment
       console.error('Failed to send courier assignment email:', error);
     }
 
@@ -286,8 +279,6 @@ export class OrdersService {
   }
 
   async findCourierOrders(courierId: number) {
-    // Active work = not yet delivered. Includes PICKED_UP so courier can
-    // track in-progress deliveries.
     return this.db
       .select()
       .from(schema.orders)
@@ -302,10 +293,6 @@ export class OrdersService {
       );
   }
 
-  /**
-   * Courier marks an order as picked up from the supplier.
-   * Once in PICKED_UP status, the batch rebalancer will not touch the order.
-   */
   async markPickedUp(orderId: number, courierId: number) {
     return this.transitionCourierStatus(
       orderId,
@@ -315,7 +302,6 @@ export class OrdersService {
     );
   }
 
-  /** Courier confirms successful delivery. */
   async markDelivered(orderId: number, courierId: number) {
     return this.transitionCourierStatus(
       orderId,

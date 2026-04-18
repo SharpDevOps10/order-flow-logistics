@@ -53,7 +53,6 @@ export const useOrdersStore = defineStore('orders', () => {
     }
   }
 
-  // Returns OrderWithItems (includes items array) — only on create
   const create = async (dto: CreateOrderDto): Promise<OrderWithItems> => {
     loading.value = true
     error.value = null

@@ -61,8 +61,7 @@ onMounted(async () => {
 <template>
   <div>
 
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-3xl font-bold text-gray-900">My Deliveries</h1>
         <p class="text-sm text-gray-400 mt-1">Orders assigned to you for delivery</p>
@@ -85,13 +84,11 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Loading -->
-    <div v-if="store.loading" class="flex items-center justify-center py-20">
+        <div v-if="store.loading" class="flex items-center justify-center py-20">
       <AppSpinner size="lg" />
     </div>
 
-    <!-- Error -->
-    <div
+        <div
       v-else-if="store.error"
       class="bg-red-50 border border-red-100 rounded-2xl p-6 text-center"
     >
@@ -101,23 +98,20 @@ onMounted(async () => {
       </AppButton>
     </div>
 
-    <!-- Empty -->
-    <div v-else-if="!store.orders.length" class="text-center py-20">
+        <div v-else-if="!store.orders.length" class="text-center py-20">
       <p class="text-4xl mb-3">🚚</p>
       <p class="text-base font-semibold text-gray-900 mb-1">No deliveries assigned</p>
       <p class="text-sm text-gray-400">You have no active deliveries right now</p>
     </div>
 
-    <!-- Deliveries list -->
-    <div v-else class="flex flex-col gap-4">
+        <div v-else class="flex flex-col gap-4">
       <div
         v-for="order in store.orders"
         :key="order.id"
         class="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col gap-4"
       >
 
-        <!-- Header row -->
-        <div class="flex items-start justify-between gap-3">
+                <div class="flex items-start justify-between gap-3">
           <div>
             <div class="flex items-center gap-2">
               <span class="text-base font-semibold text-gray-900">Order #{{ order.id }}</span>
@@ -130,8 +124,7 @@ onMounted(async () => {
           </p>
         </div>
 
-        <!-- Details -->
-        <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-2 gap-3">
           <div class="bg-gray-50 rounded-xl px-4 py-3">
             <p class="text-xs text-gray-400 mb-1">Delivery address</p>
             <p class="text-sm text-gray-700 font-medium">{{ order.deliveryAddress }}</p>
@@ -146,8 +139,7 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Action buttons -->
-        <div class="flex items-center justify-end gap-2">
+                <div class="flex items-center justify-end gap-2">
           <AppButton
             v-if="order.status === OrderStatus.ReadyForDelivery"
             size="sm"
@@ -167,8 +159,7 @@ onMounted(async () => {
 
       </div>
 
-      <!-- Route map CTA -->
-      <div
+            <div
         class="bg-orange-50 border border-orange-100 rounded-2xl p-5 flex items-center justify-between gap-4"
       >
         <div>

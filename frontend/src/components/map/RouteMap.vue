@@ -10,7 +10,6 @@ const props = defineProps<{
 let map: L.Map | null = null
 let layerGroup: L.LayerGroup | null = null
 
-/** Colors rotated per segment (pickup→stop1, stop1→stop2, …). */
 const SEGMENT_COLORS = [
   '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444',
   '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16',
@@ -66,7 +65,6 @@ function renderRoutes() {
       latlngs.push(ll)
       allLatLngs.push(ll)
 
-      // Marker for stop N takes the color of the segment that arrives at it (segment N-1).
       const arrivingColor = wpIndex > 0 ? segmentColor(wpIndex - 1) : '#f97316'
 
       const popupContent = `
@@ -91,7 +89,6 @@ function renderRoutes() {
       layerGroup!.addLayer(marker)
     })
 
-    // Draw each segment with its own color.
     if (route.geometry && route.geometry.length > 0) {
       route.geometry.forEach((segment, i) => {
         if (segment.length < 2) return
@@ -103,7 +100,6 @@ function renderRoutes() {
         }).addTo(layerGroup!)
       })
     } else {
-      // Fallback: straight lines between consecutive waypoints, one color per segment.
       for (let i = 0; i < latlngs.length - 1; i++) {
         L.polyline([latlngs[i], latlngs[i + 1]], {
           color: segmentColor(i),

@@ -17,8 +17,7 @@ const handleLogout = async () => {
     <nav class="bg-white border-b border-gray-200 sticky top-0 z-10">
       <div class="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
 
-        <!-- Left: brand + nav -->
-        <div class="flex items-center gap-6">
+                <div class="flex items-center gap-6">
           <div class="flex items-center gap-2">
             <span class="text-sm font-bold text-gray-900">OrderFlow</span>
             <span class="text-xs bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-medium">Supplier</span>
@@ -41,8 +40,7 @@ const handleLogout = async () => {
           </div>
         </div>
 
-        <!-- Right: user info + logout -->
-        <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3">
           <div class="text-right">
             <p class="text-xs font-medium text-gray-700 leading-tight">{{ authStore.user?.email }}</p>
             <p class="text-xs text-gray-400 leading-tight">Supplier</p>

@@ -22,7 +22,6 @@ interface OverpassResponse {
   elements: OverpassElement[];
 }
 
-/** Public Overpass API mirrors, tried in order until one succeeds. */
 const OVERPASS_ENDPOINTS = [
   'https://overpass-api.de/api/interpreter',
   'https://overpass.kumi.systems/api/interpreter',

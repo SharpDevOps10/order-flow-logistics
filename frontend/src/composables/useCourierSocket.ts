@@ -17,7 +17,6 @@ interface ClientToServerEvents {
   'courier:location': (payload: { lat: number; lng: number }) => void
 }
 
-/** How often to broadcast the courier's current location (ms). */
 const LOCATION_INTERVAL_MS = 60_000
 
 export const useCourierSocket = () => {
@@ -40,12 +39,10 @@ export const useCourierSocket = () => {
     })
 
     socket.on('connect', () => {
-      // eslint-disable-next-line no-console
       console.log('[CourierSocket] connected')
     })
 
     socket.on('disconnect', (reason) => {
-      // eslint-disable-next-line no-console
       console.log('[CourierSocket] disconnected:', reason)
     })
 

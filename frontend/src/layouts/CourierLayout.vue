@@ -41,8 +41,7 @@ const handleLogout = async () => {
             </RouterLink>
           </div>
         </div>
-        <!-- Right: user info + logout -->
-        <div class="flex items-center gap-3">
+                <div class="flex items-center gap-3">
           <div class="text-right">
             <p class="text-xs font-medium text-gray-700 leading-tight">{{ authStore.user?.email }}</p>
             <p class="text-xs text-gray-400 leading-tight">Courier</p>

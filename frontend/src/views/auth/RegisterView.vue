@@ -98,21 +98,18 @@ const handleSubmit = async () => {
     const role = authStore.role
     if (role) router.push(ROLE_HOME[role])
   } catch {
-    // error already stored in authStore.error
   }
 }
 </script>
 
 <template>
   <div>
-    <!-- Header -->
-    <div class="mb-7">
+        <div class="mb-7">
       <h1 class="text-2xl font-bold text-gray-900">Create an Account</h1>
       <p class="text-sm text-gray-400 mt-1">Fill in your registration details</p>
     </div>
 
-    <!-- Form -->
-    <form class="space-y-4" @submit.prevent="handleSubmit">
+        <form class="space-y-4" @submit.prevent="handleSubmit">
 
       <AppInput
         v-model="form.fullName"
@@ -138,8 +135,7 @@ const handleSubmit = async () => {
         :error="fieldErrors.password"
       />
 
-      <!-- Role picker -->
-      <div class="flex flex-col gap-1">
+            <div class="flex flex-col gap-1">
         <span class="text-sm font-medium text-gray-700">Role</span>
         <div class="grid grid-cols-3 gap-2">
           <button
@@ -167,8 +163,7 @@ const handleSubmit = async () => {
         <p v-if="fieldErrors.role" class="text-xs text-red-500 mt-0.5">{{ fieldErrors.role }}</p>
       </div>
 
-      <!-- Server error -->
-      <div
+            <div
         v-if="authStore.error"
         class="bg-red-50 border border-red-100 rounded-xl px-4 py-3"
       >
@@ -185,15 +180,13 @@ const handleSubmit = async () => {
       </AppButton>
     </form>
 
-    <!-- Divider -->
-    <div class="flex items-center gap-3 my-6">
+        <div class="flex items-center gap-3 my-6">
       <div class="flex-1 h-px bg-gray-100" />
       <span class="text-xs text-gray-400">or</span>
       <div class="flex-1 h-px bg-gray-100" />
     </div>
 
-    <!-- Link to login -->
-    <p class="text-center text-sm text-gray-500">
+        <p class="text-center text-sm text-gray-500">
       Already have an account?
       <RouterLink to="/login" class="text-blue-600 font-medium hover:underline ml-1">
         Sign In

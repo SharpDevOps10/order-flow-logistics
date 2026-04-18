@@ -68,8 +68,7 @@ const techStack: TechItem[] = [
 <template>
   <div class="min-h-screen bg-white flex flex-col">
 
-    <!-- Nav -->
-    <header class="border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+        <header class="border-b border-gray-100 bg-white/80 backdrop-blur-sm sticky top-0 z-10">
       <div class="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <span class="text-xl font-bold text-gray-900">OrderFlow</span>
@@ -94,8 +93,7 @@ const techStack: TechItem[] = [
 
     <main class="flex-1">
 
-      <!-- Hero -->
-      <section class="max-w-6xl mx-auto px-6 pt-20 pb-24 text-center">
+            <section class="max-w-6xl mx-auto px-6 pt-20 pb-24 text-center">
         <div class="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-full px-4 py-1.5 mb-8">
           <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
           <span class="text-sm text-blue-700 font-medium">Thesis Project · 2026</span>
@@ -128,8 +126,7 @@ const techStack: TechItem[] = [
           </button>
         </div>
 
-        <!-- Stats -->
-        <div class="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto">
+                <div class="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto">
           <div>
             <p class="text-3xl font-bold text-gray-900">4</p>
             <p class="text-sm text-gray-500 mt-1">Roles</p>
@@ -145,11 +142,9 @@ const techStack: TechItem[] = [
         </div>
       </section>
 
-      <!-- Divider -->
-      <div class="border-t border-gray-100" />
+            <div class="border-t border-gray-100" />
 
-      <!-- Features / Roles -->
-      <section class="max-w-6xl mx-auto px-6 py-20">
+            <section class="max-w-6xl mx-auto px-6 py-20">
         <div class="text-center mb-12">
           <h2 class="text-3xl font-bold text-gray-900 mb-3">Four Roles — One Platform</h2>
           <p class="text-gray-500 text-lg">Each participant gets a personalized interface with their own set of features</p>
@@ -172,11 +167,9 @@ const techStack: TechItem[] = [
         </div>
       </section>
 
-      <!-- Divider -->
-      <div class="border-t border-gray-100" />
+            <div class="border-t border-gray-100" />
 
-      <!-- Route Algorithm highlight -->
-      <section class="bg-gray-50">
+            <section class="bg-gray-50">
         <div class="max-w-6xl mx-auto px-6 py-20 flex flex-col lg:flex-row items-center gap-12">
           <div class="flex-1">
             <span class="text-xs font-semibold tracking-widest uppercase text-blue-600">Scientific Part</span>
@@ -207,8 +200,7 @@ const techStack: TechItem[] = [
             </ul>
           </div>
 
-          <!-- Route diagram -->
-          <div class="flex-1 flex justify-center">
+                    <div class="flex-1 flex justify-center">
             <div class="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm w-full max-w-sm">
               <p class="text-xs text-gray-400 font-medium uppercase tracking-widest mb-4">Route Example</p>
               <div class="space-y-3">
@@ -249,11 +241,9 @@ const techStack: TechItem[] = [
         </div>
       </section>
 
-      <!-- Divider -->
-      <div class="border-t border-gray-100" />
+            <div class="border-t border-gray-100" />
 
-      <!-- Tech Stack -->
-      <section class="max-w-6xl mx-auto px-6 py-20">
+            <section class="max-w-6xl mx-auto px-6 py-20">
         <div class="text-center mb-12">
           <h2 class="text-3xl font-bold text-gray-900 mb-3">Technology Stack</h2>
           <p class="text-gray-500 text-lg">Modern technologies for production-ready solution</p>
@@ -271,8 +261,7 @@ const techStack: TechItem[] = [
         </div>
       </section>
 
-      <!-- CTA -->
-      <section class="bg-blue-600">
+            <section class="bg-blue-600">
         <div class="max-w-6xl mx-auto px-6 py-16 text-center">
           <h2 class="text-3xl font-bold text-white mb-4">Ready to Get Started?</h2>
           <p class="text-blue-200 text-lg mb-8">Choose your role and sign in</p>
@@ -294,8 +283,7 @@ const techStack: TechItem[] = [
       </section>
     </main>
 
-    <!-- Footer -->
-    <footer class="border-t border-gray-100 bg-white">
+        <footer class="border-t border-gray-100 bg-white">
       <div class="max-w-6xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-2 text-sm text-gray-400">
         <span>© 2026 OrderFlow Logistics — Thesis Project</span>
         <span>NestJS · Vue 3 · PostgreSQL · Dijkstra</span>

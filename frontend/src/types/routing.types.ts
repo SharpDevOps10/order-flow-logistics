@@ -13,6 +13,5 @@ export interface RouteWaypoint {
 export interface OptimizedRoute {
   totalDistanceKm: number
   waypoints: RouteWaypoint[]
-  /** Road geometry grouped by segment (waypoint-to-waypoint). */
   geometry: [number, number][][] | null
 }

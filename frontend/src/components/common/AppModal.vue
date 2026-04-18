@@ -22,14 +22,11 @@ const close = () => {
         class="fixed inset-0 z-50 flex items-center justify-center p-4"
         @mousedown.self="close"
       >
-        <!-- Overlay -->
-        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+                <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
-        <!-- Card -->
-        <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col max-h-[90vh]">
+                <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md flex flex-col max-h-[90vh]">
 
-          <!-- Header -->
-          <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
             <h2 class="text-base font-semibold text-gray-900">{{ props.title }}</h2>
             <button
               class="text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-lg hover:bg-gray-100"
@@ -41,13 +38,11 @@ const close = () => {
             </button>
           </div>
 
-          <!-- Body -->
-          <div class="px-6 py-5 overflow-y-auto flex-1">
+                    <div class="px-6 py-5 overflow-y-auto flex-1">
             <slot />
           </div>
 
-          <!-- Footer -->
-          <div v-if="$slots.footer" class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 flex-shrink-0">
+                    <div v-if="$slots.footer" class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 flex-shrink-0">
             <slot name="footer" />
           </div>
 

@@ -5,10 +5,6 @@ import { Roles } from '../../decorators/roles.decorator';
 import { Role } from '../../common/enums/role.enum';
 import { DlqService, DlqStats, ReplayResult } from './dlq.service';
 
-/**
- * Admin-only operations for the order-events dead-letter queue.
- * Lets ops see how many messages failed and replay them after a fix.
- */
 @Controller('admin/dlq')
 @UseGuards(AccessTokenGuard, RolesGuard)
 @Roles(Role.ADMIN)

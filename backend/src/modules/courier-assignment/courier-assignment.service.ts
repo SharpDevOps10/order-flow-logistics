@@ -12,7 +12,6 @@ import { haversineKm } from '../routing/dijkstra';
 import { RoutingService } from '../routing/routing.service';
 
 export interface OrderReadyEvent {
-  /** Unique id per emitted message — used for consumer-side idempotency. */
   messageId?: string;
   orderId: number;
   organizationId: number;
@@ -23,9 +22,7 @@ export interface OrderReadyEvent {
   totalAmount: number;
 }
 
-/** Weight of geographic distance in the final score. */
 const DISTANCE_WEIGHT = 0.7;
-/** Weight of current workload in the final score. */
 const WORKLOAD_WEIGHT = 0.3;
 
 @Injectable()
@@ -41,10 +38,6 @@ export class CourierAssignmentService {
     private readonly routingService: RoutingService,
   ) {}
 
-  /**
-   * Picks the best courier for an order using a distance+workload score
-   * and performs all side effects (DB update, WS notify, email, cache invalidation).
-   */
   async assignCourierForOrder(event: OrderReadyEvent): Promise<void> {
     this.logger.log(`Auto-assigning courier for order #${event.orderId}`);
 
@@ -64,7 +57,6 @@ export class CourierAssignmentService {
       return;
     }
 
-    // Count active (READY_FOR_DELIVERY) orders per courier to measure workload.
     const workloadMap = new Map<number, number>();
     for (const courier of couriers) {
       const [row] = await this.db
@@ -82,7 +74,6 @@ export class CourierAssignmentService {
       workloadMap.set(courier.id, Number(row.total));
     }
 
-    // Read real-time locations from Redis (TTL-based: offline couriers have no key).
     const locationMap = new Map<number, { lat: number; lng: number }>();
     for (const courier of couriers) {
       const raw = await this.redisService.get(`courier:location:${courier.id}`);
@@ -96,13 +87,6 @@ export class CourierAssignmentService {
 
     const orgNode = { id: 0, lat: event.orgLat, lng: event.orgLng };
 
-    /**
-     * Scoring formula:
-     *   score = α · (1 / (1 + distKm))  +  β · (1 / (1 + activeOrders))
-     *
-     * Couriers without a Redis location fall back to workload-only scoring
-     * so they can still be assigned when no one is broadcasting position.
-     */
     const scored = couriers.map((courier) => {
       const activeOrders = workloadMap.get(courier.id) ?? 0;
       const workloadScore = 1 / (1 + activeOrders);

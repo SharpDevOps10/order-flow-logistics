@@ -174,8 +174,6 @@ export class RoutingService {
       const waypointNodes: GraphNode[] = [pickupNode, ...deliveryNodes];
       const orderDetailsMap = new Map(groupOrders.map((o) => [o.id, o]));
 
-      // 1. Build N×N distance matrix (OSM-based if available, Haversine otherwise)
-      //    plus per-pair OSM paths for later geometry rendering.
       let matrix: DistanceMatrix;
       let snappedOsmIds: number[] | null = null;
 
@@ -192,7 +190,6 @@ export class RoutingService {
         matrix = buildHaversineMatrix(waypointNodes);
       }
 
-      // 2. Solve the TSP on the matrix (Held-Karp for small n, greedy+2-opt above).
       const tsp = solveTSP(matrix.distances, 0);
       this.logger.log(
         `TSP solved for org #${orgId} (n=${waypointNodes.length}, solver=${tsp.solver}): ${tsp.totalDistance.toFixed(2)} km` +
@@ -201,7 +198,6 @@ export class RoutingService {
             : ''),
       );
 
-      // 3. Map TSP indices back to logical node ids and precomputed distances.
       const orderedLogicalIds = tsp.route.map((idx) => waypointNodes[idx].id);
       const segmentDistancesKm: number[] = [0];
       for (let i = 1; i < tsp.route.length; i++) {
@@ -210,7 +206,6 @@ export class RoutingService {
         );
       }
 
-      // 4. Build per-segment geometry from the precomputed paths.
       let geometry: [number, number][][] | null = null;
       if (matrix.paths) {
         const segments: [number, number][][] = [];

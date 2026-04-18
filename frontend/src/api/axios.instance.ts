@@ -42,7 +42,6 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean }
 
-    // Don't retry auth endpoints - 401 means authentication failed, not token expired
     const isAuthEndpoint = originalRequest.url?.includes('/auth/signin') || originalRequest.url?.includes('/auth/signup')
     if (isAuthEndpoint) {
       return Promise.reject(error)

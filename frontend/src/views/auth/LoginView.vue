@@ -51,7 +51,6 @@ const handleSubmit = async () => {
     const role = authStore.role
     if (role) router.push(ROLE_HOME[role])
   } catch {
-    // Clear password on auth error, keep email for retry
     form.password = ''
   }
 }
@@ -59,14 +58,12 @@ const handleSubmit = async () => {
 
 <template>
   <div>
-    <!-- Header -->
-    <div class="mb-7">
+        <div class="mb-7">
       <h1 class="text-2xl font-bold text-gray-900">Sign In</h1>
       <p class="text-sm text-gray-400 mt-1">Enter your credentials to sign in</p>
     </div>
 
-    <!-- Form -->
-    <form class="space-y-4" @submit.prevent="handleSubmit">
+        <form class="space-y-4" @submit.prevent="handleSubmit">
 
       <AppInput
         v-model="form.email"
@@ -84,8 +81,7 @@ const handleSubmit = async () => {
         :error="fieldErrors.password"
       />
 
-      <!-- Server error -->
-      <div
+            <div
         v-if="authStore.error"
         class="bg-red-50 border border-red-100 rounded-xl px-4 py-3"
       >
@@ -102,15 +98,13 @@ const handleSubmit = async () => {
       </AppButton>
     </form>
 
-    <!-- Divider -->
-    <div class="flex items-center gap-3 my-6">
+        <div class="flex items-center gap-3 my-6">
       <div class="flex-1 h-px bg-gray-100" />
       <span class="text-xs text-gray-400">or</span>
       <div class="flex-1 h-px bg-gray-100" />
     </div>
 
-    <!-- Link to register -->
-    <p class="text-center text-sm text-gray-500">
+        <p class="text-center text-sm text-gray-500">
       Don't have an account?
       <RouterLink to="/register" class="text-blue-600 font-medium hover:underline ml-1">
         Sign Up

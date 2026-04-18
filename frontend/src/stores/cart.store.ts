@@ -9,7 +9,6 @@ export interface CartItem {
 
 export const useCartStore = defineStore('cart', () => {
   const items = ref<CartItem[]>([])
-  // Tracks which org the cart belongs to — one org per cart
   const organizationId = ref<number | null>(null)
 
   const total = computed(() =>
@@ -22,7 +21,6 @@ export const useCartStore = defineStore('cart', () => {
 
   const isEmpty = computed(() => items.value.length === 0)
 
-  // If product is from a different org — clear cart first (one org per order)
   const addItem = (product: Product, quantity = 1) => {
     if (organizationId.value !== null && organizationId.value !== product.organizationId) {
       items.value = []

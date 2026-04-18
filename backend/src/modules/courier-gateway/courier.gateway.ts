@@ -13,7 +13,6 @@ import { Socket } from 'socket.io';
 import { RedisService } from '../redis/redis.service';
 import { Role } from '../../common/enums/role.enum';
 
-/** TTL for courier location in Redis (5 minutes). */
 const LOCATION_TTL_SECONDS = 300;
 
 interface LocationPayload {
@@ -95,10 +94,6 @@ export class CourierGateway
     }
   }
 
-  /**
-   * Sent to a courier when the batch rebalancer moves an order away from them
-   * so the UI can explain why the order vanished from their list.
-   */
   notifyReassignedAway(courierId: number, orderId: number): void {
     const client = this.clients.get(courierId);
     if (client) {

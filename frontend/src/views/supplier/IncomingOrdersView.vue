@@ -38,7 +38,6 @@ const statusLabel: Record<OrderStatus, string> = {
   [OrderStatus.ReadyForDelivery]: 'Ready for Delivery',
 }
 
-// Status update
 const updatingIds = ref<Set<number>>(new Set())
 
 const handleStatusUpdate = async (order: Order) => {
@@ -58,7 +57,6 @@ const handleStatusUpdate = async (order: Order) => {
   }
 }
 
-// Couriers
 const couriers = ref<CourierUser[]>([])
 const couriersLoading = ref(false)
 
@@ -74,7 +72,6 @@ const loadCouriers = async () => {
   }
 }
 
-// Assign courier modal
 const isModalOpen = ref(false)
 const selectedOrder = ref<Order | null>(null)
 const selectedCourierId = ref<number | null>(null)
@@ -122,8 +119,7 @@ onMounted(async () => {
 <template>
   <div>
 
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-3xl font-bold text-gray-900">Incoming Orders</h1>
         <p class="text-sm text-gray-400 mt-1">Orders placed by clients</p>
@@ -136,13 +132,11 @@ onMounted(async () => {
       </span>
     </div>
 
-    <!-- Loading -->
-    <div v-if="store.loading" class="flex items-center justify-center py-20">
+        <div v-if="store.loading" class="flex items-center justify-center py-20">
       <AppSpinner size="lg" />
     </div>
 
-    <!-- Error -->
-    <div
+        <div
       v-else-if="store.error"
       class="bg-red-50 border border-red-100 rounded-2xl p-6 text-center"
     >
@@ -152,23 +146,20 @@ onMounted(async () => {
       </AppButton>
     </div>
 
-    <!-- Empty -->
-    <div v-else-if="!store.orders.length" class="text-center py-20">
+        <div v-else-if="!store.orders.length" class="text-center py-20">
       <p class="text-4xl mb-3">📋</p>
       <p class="text-base font-semibold text-gray-900 mb-1">No orders yet</p>
       <p class="text-sm text-gray-400">New orders will appear here</p>
     </div>
 
-    <!-- Orders list -->
-    <div v-else class="flex flex-col gap-4">
+        <div v-else class="flex flex-col gap-4">
       <div
         v-for="order in store.orders"
         :key="order.id"
         class="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col gap-4"
       >
 
-        <!-- Order header -->
-        <div class="flex items-start justify-between gap-3">
+                <div class="flex items-start justify-between gap-3">
           <div>
             <div class="flex items-center gap-2">
               <span class="text-base font-semibold text-gray-900">Order #{{ order.id }}</span>
@@ -183,8 +174,7 @@ onMounted(async () => {
           </p>
         </div>
 
-        <!-- Order details -->
-        <div class="grid grid-cols-2 gap-3 text-sm">
+                <div class="grid grid-cols-2 gap-3 text-sm">
           <div class="bg-gray-50 rounded-xl px-4 py-3">
             <p class="text-xs text-gray-400 mb-1">Delivery address</p>
             <p class="text-gray-700 font-medium truncate">{{ order.deliveryAddress }}</p>
@@ -197,8 +187,7 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Actions -->
-        <div class="flex items-center justify-end gap-2 pt-1 border-t border-gray-50">
+                <div class="flex items-center justify-end gap-2 pt-1 border-t border-gray-50">
           <AppButton
             v-if="order.status === OrderStatus.ReadyForDelivery"
             variant="secondary"
@@ -221,25 +210,21 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Assign courier modal -->
-    <AppModal v-model="isModalOpen" title="Assign courier">
+        <AppModal v-model="isModalOpen" title="Assign courier">
       <div class="flex flex-col gap-4">
         <p class="text-sm text-gray-500">
           Order <span class="font-semibold text-gray-900">#{{ selectedOrder?.id }}</span>
         </p>
 
-        <!-- Loading couriers -->
-        <div v-if="couriersLoading" class="flex items-center justify-center py-6">
+                <div v-if="couriersLoading" class="flex items-center justify-center py-6">
           <AppSpinner size="md" />
         </div>
 
-        <!-- Empty couriers -->
-        <div v-else-if="!couriers.length" class="text-center py-6 text-sm text-gray-400">
+                <div v-else-if="!couriers.length" class="text-center py-6 text-sm text-gray-400">
           No couriers registered in the system
         </div>
 
-        <!-- Courier list -->
-        <div v-else class="flex flex-col gap-2">
+                <div v-else class="flex flex-col gap-2">
           <button
             v-for="courier in couriers"
             :key="courier.id"
@@ -249,8 +234,7 @@ onMounted(async () => {
               : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'"
             @click="selectedCourierId = courier.id"
           >
-            <!-- Avatar -->
-            <div
+                        <div
               class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
               :class="selectedCourierId === courier.id
                 ? 'bg-blue-600 text-white'
@@ -259,14 +243,12 @@ onMounted(async () => {
               {{ courier.fullName.charAt(0).toUpperCase() }}
             </div>
 
-            <!-- Info -->
-            <div class="flex-1 min-w-0">
+                        <div class="flex-1 min-w-0">
               <p class="text-sm font-medium text-gray-900 truncate">{{ courier.fullName }}</p>
               <p class="text-xs text-gray-400 truncate">{{ courier.email }}</p>
             </div>
 
-            <!-- Check -->
-            <svg
+                        <svg
               v-if="selectedCourierId === courier.id"
               class="w-4 h-4 text-blue-600 flex-shrink-0"
               fill="none"

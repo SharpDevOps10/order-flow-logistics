@@ -67,8 +67,7 @@ const handlePlaceOrder = async () => {
 <template>
   <div class="max-w-2xl">
 
-    <!-- Header -->
-    <div class="flex items-center gap-3 mb-8">
+        <div class="flex items-center gap-3 mb-8">
       <button
         class="text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-lg hover:bg-gray-100"
         @click="goBack"
@@ -83,8 +82,7 @@ const handlePlaceOrder = async () => {
       </div>
     </div>
 
-    <!-- Empty cart guard -->
-    <div v-if="cart.isEmpty" class="text-center py-20">
+        <div v-if="cart.isEmpty" class="text-center py-20">
       <p class="text-4xl mb-3">🛒</p>
       <p class="text-base font-semibold text-gray-900 mb-1">Your cart is empty</p>
       <p class="text-sm text-gray-400 mb-6">Add products from the marketplace first</p>
@@ -93,8 +91,7 @@ const handlePlaceOrder = async () => {
 
     <div v-else class="flex flex-col gap-5">
 
-      <!-- Order items -->
-      <div class="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col gap-1">
+            <div class="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col gap-1">
         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Order items</p>
 
         <div
@@ -111,19 +108,16 @@ const handlePlaceOrder = async () => {
           </p>
         </div>
 
-        <!-- Total -->
-        <div class="flex items-center justify-between pt-3 mt-1">
+                <div class="flex items-center justify-between pt-3 mt-1">
           <p class="text-base font-semibold text-gray-900">Total</p>
           <p class="text-xl font-bold text-gray-900">₴{{ cart.total.toFixed(2) }}</p>
         </div>
       </div>
 
-      <!-- Delivery details -->
-      <div class="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col gap-4">
+            <div class="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col gap-4">
         <p class="text-xs font-semibold text-gray-400 uppercase tracking-wide">Delivery details</p>
 
-        <!-- Address field -->
-        <div class="flex flex-col gap-1">
+                <div class="flex flex-col gap-1">
           <label class="text-sm font-medium text-gray-700">Delivery address</label>
           <div class="flex gap-2">
             <input
@@ -134,8 +128,7 @@ const handlePlaceOrder = async () => {
               :class="addressError ? 'border-red-400 focus:ring-red-400' : 'border-gray-200 focus:ring-blue-500'"
               @input="coords = null"
             />
-            <!-- Find coords button (shown when address typed manually) -->
-            <button
+                        <button
               v-if="deliveryAddress && !coords"
               class="flex-shrink-0 flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-700 border border-blue-200 hover:border-blue-300 hover:bg-blue-50 px-3 py-2 rounded-xl transition-colors disabled:opacity-50"
               :disabled="isGeocoding"
@@ -151,8 +144,7 @@ const handlePlaceOrder = async () => {
           <p v-if="addressError" class="text-xs text-red-500">{{ addressError }}</p>
         </div>
 
-        <!-- Use my location button -->
-        <button
+                <button
           class="self-start flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-gray-300 hover:bg-gray-50 px-3 py-2 rounded-xl transition-colors disabled:opacity-50"
           :disabled="isLocating"
           @click="handleDetectLocation"
@@ -164,8 +156,7 @@ const handlePlaceOrder = async () => {
           Use my current location
         </button>
 
-        <!-- Coords indicator -->
-        <div
+                <div
           v-if="coords"
           class="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-100 rounded-xl px-3 py-2"
         >
@@ -175,12 +166,10 @@ const handlePlaceOrder = async () => {
           Coordinates detected: {{ Number(coords.lat).toFixed(5) }}, {{ Number(coords.lng).toFixed(5) }}
         </div>
 
-        <!-- Location error -->
-        <p v-if="locationError" class="text-xs text-red-500">{{ locationError }}</p>
+                <p v-if="locationError" class="text-xs text-red-500">{{ locationError }}</p>
       </div>
 
-      <!-- Actions -->
-      <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between">
         <AppButton variant="ghost" @click="goBack">Back</AppButton>
         <AppButton :loading="ordersStore.loading" @click="handlePlaceOrder">
           Place order · ₴{{ cart.total.toFixed(2) }}

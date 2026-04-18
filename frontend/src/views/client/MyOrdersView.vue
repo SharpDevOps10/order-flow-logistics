@@ -62,7 +62,6 @@ const formatDate = (dateStr: string | null): string => {
   })
 }
 
-// Cancel flow
 const isCancelModalOpen = ref(false)
 const selectedOrder = ref<Order | null>(null)
 const isCancelling = ref(false)
@@ -95,8 +94,7 @@ onMounted(async () => {
 <template>
   <div>
 
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-3xl font-bold text-gray-900">My Orders</h1>
         <p class="text-sm text-gray-400 mt-1">Track your order history</p>
@@ -114,13 +112,11 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Loading -->
-    <div v-if="store.loading" class="flex items-center justify-center py-20">
+        <div v-if="store.loading" class="flex items-center justify-center py-20">
       <AppSpinner size="lg" />
     </div>
 
-    <!-- Error -->
-    <div
+        <div
       v-else-if="store.error"
       class="bg-red-50 border border-red-100 rounded-2xl p-6 text-center"
     >
@@ -130,24 +126,21 @@ onMounted(async () => {
       </AppButton>
     </div>
 
-    <!-- Empty -->
-    <div v-else-if="!store.orders.length" class="text-center py-20">
+        <div v-else-if="!store.orders.length" class="text-center py-20">
       <p class="text-4xl mb-3">📦</p>
       <p class="text-base font-semibold text-gray-900 mb-1">No orders yet</p>
       <p class="text-sm text-gray-400 mb-6">Browse the marketplace and place your first order</p>
       <AppButton @click="router.push({ name: 'marketplace' })">Go to Marketplace</AppButton>
     </div>
 
-    <!-- Orders list -->
-    <div v-else class="flex flex-col gap-4">
+        <div v-else class="flex flex-col gap-4">
       <div
         v-for="order in store.orders"
         :key="order.id"
         class="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col gap-4"
       >
 
-        <!-- Order header -->
-        <div class="flex items-start justify-between gap-3">
+                <div class="flex items-start justify-between gap-3">
           <div>
             <div class="flex items-center gap-2">
               <span class="text-base font-semibold text-gray-900">Order #{{ order.id }}</span>
@@ -162,8 +155,7 @@ onMounted(async () => {
           </p>
         </div>
 
-        <!-- Order details -->
-        <div class="grid grid-cols-2 gap-3 text-sm">
+                <div class="grid grid-cols-2 gap-3 text-sm">
           <div class="bg-gray-50 rounded-xl px-4 py-3">
             <p class="text-xs text-gray-400 mb-1">Delivery address</p>
             <p class="text-gray-700 font-medium truncate">{{ order.deliveryAddress }}</p>
@@ -176,8 +168,7 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Route toggle -->
-        <div v-if="canShowRoute(order)">
+                <div v-if="canShowRoute(order)">
           <button
             class="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
             @click="toggleRoute(order.id)"
@@ -204,8 +195,7 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Actions -->
-        <div
+                <div
           v-if="order.status === OrderStatus.Pending"
           class="flex justify-end pt-1 border-t border-gray-50"
         >
@@ -217,8 +207,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Cancel confirmation modal -->
-    <AppModal v-model="isCancelModalOpen" title="Cancel order">
+        <AppModal v-model="isCancelModalOpen" title="Cancel order">
       <div class="flex flex-col gap-3">
         <p class="text-sm text-gray-600">
           Are you sure you want to cancel

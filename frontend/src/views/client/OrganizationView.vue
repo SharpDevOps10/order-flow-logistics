@@ -50,8 +50,7 @@ onMounted(async () => {
 <template>
   <div>
 
-    <!-- Header -->
-    <div class="flex items-center gap-3 mb-6">
+        <div class="flex items-center gap-3 mb-6">
       <button
         class="text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-lg hover:bg-gray-100"
         @click="goBack"
@@ -70,8 +69,7 @@ onMounted(async () => {
         <p v-if="org?.region" class="text-sm text-gray-400 mt-1">{{ org.region }}</p>
       </div>
 
-      <!-- Cart button -->
-      <button
+            <button
         v-if="!cart.isEmpty && cart.organizationId === orgId"
         class="flex items-center gap-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl transition-colors"
         @click="goToCheckout"
@@ -83,13 +81,11 @@ onMounted(async () => {
       </button>
     </div>
 
-    <!-- Products loading -->
-    <div v-if="productsStore.loading" class="flex items-center justify-center py-20">
+        <div v-if="productsStore.loading" class="flex items-center justify-center py-20">
       <AppSpinner size="lg" />
     </div>
 
-    <!-- Products error -->
-    <div
+        <div
       v-else-if="productsStore.error"
       class="bg-red-50 border border-red-100 rounded-2xl p-6 text-center"
     >
@@ -99,15 +95,13 @@ onMounted(async () => {
       </AppButton>
     </div>
 
-    <!-- Empty -->
-    <div v-else-if="!productsStore.products.length" class="text-center py-20">
+        <div v-else-if="!productsStore.products.length" class="text-center py-20">
       <p class="text-4xl mb-3">📦</p>
       <p class="text-base font-semibold text-gray-900 mb-1">No products available</p>
       <p class="text-sm text-gray-400">This organization has no products yet</p>
     </div>
 
-    <!-- Products grid -->
-    <div v-else class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div v-else class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       <div
         v-for="product in productsStore.products"
         :key="product.id"
@@ -123,8 +117,7 @@ onMounted(async () => {
         <div class="flex items-center justify-between">
           <p class="text-lg font-bold text-gray-900">₴{{ product.price.toFixed(2) }}</p>
 
-          <!-- Add / quantity controls -->
-          <div v-if="cartQty(product.id) > 0" class="flex items-center gap-2">
+                    <div v-if="cartQty(product.id) > 0" class="flex items-center gap-2">
             <button
               class="w-7 h-7 rounded-lg border border-gray-200 hover:bg-gray-50 flex items-center justify-center text-gray-600 transition-colors"
               @click="cart.updateQuantity(product.id, cartQty(product.id) - 1)"

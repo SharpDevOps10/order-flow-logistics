@@ -14,8 +14,6 @@ async function bootstrap() {
     options: {
       urls: [process.env.RABBITMQ_URL ?? 'amqp://guest:guest@localhost:5672'],
       queue: process.env.RABBITMQ_QUEUE ?? 'order-events',
-      // Route rejected messages (nack with requeue=false) to the DLQ via the
-      // default exchange so no event ever silently disappears.
       queueOptions: {
         durable: true,
         arguments: {

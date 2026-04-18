@@ -17,7 +17,6 @@ const mapInitialized = ref(false)
 onMounted(() => {
   if (!mapContainer.value || !props.organization.lat || !props.organization.lng) return
 
-  // Fix Leaflet default icon path
   delete (L.Icon.Default.prototype as any)._getIconUrl
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -25,19 +24,16 @@ onMounted(() => {
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
   })
 
-  // Initialize map
   const map = L.map(mapContainer.value, {
     center: [Number(props.organization.lat), Number(props.organization.lng)],
     zoom: 15,
   })
 
-  // Add tile layer
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap contributors',
     maxZoom: 19,
   }).addTo(map)
 
-  // Add marker
   L.marker([Number(props.organization.lat), Number(props.organization.lng)])
     .addTo(map)
     .bindPopup(props.organization.address || 'Location')
@@ -49,8 +45,7 @@ onMounted(() => {
 <template>
   <div class="bg-white border border-gray-100 rounded-2xl p-6 hover:shadow-md transition-shadow flex flex-col gap-5">
 
-    <!-- Header -->
-    <div class="flex items-start justify-between gap-3">
+        <div class="flex items-start justify-between gap-3">
       <div class="flex-1 min-w-0">
         <h3 class="text-lg font-semibold text-gray-900 truncate">{{ props.organization.name }}</h3>
         <p v-if="props.organization.region" class="text-sm text-gray-500 mt-1 flex items-center gap-1.5">
@@ -66,25 +61,21 @@ onMounted(() => {
       </AppBadge>
     </div>
 
-    <!-- Address and Map -->
-    <div v-if="props.organization.lat && props.organization.lng" class="flex flex-col gap-3 -mx-6 -mb-6">
-      <!-- Address -->
-      <div class="px-6 flex items-start gap-2 text-sm">
+        <div v-if="props.organization.lat && props.organization.lng" class="flex flex-col gap-3 -mx-6 -mb-6">
+            <div class="px-6 flex items-start gap-2 text-sm">
         <svg class="w-4 h-4 flex-shrink-0 text-blue-500 mt-0.5" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" />
         </svg>
         <span class="text-gray-700">{{ props.organization.address }}</span>
       </div>
 
-      <!-- Map -->
-      <div
+            <div
         ref="mapContainer"
         class="h-48 bg-gray-100 rounded-b-2xl border-t border-gray-100 leaflet-container"
       />
     </div>
 
-    <!-- Footer: meta + actions -->
-    <div class="flex items-center justify-between gap-3 pt-1 border-t border-gray-50">
+        <div class="flex items-center justify-between gap-3 pt-1 border-t border-gray-50">
       <span class="text-sm text-gray-400">ID: {{ props.organization.id }}</span>
       <div class="flex items-center gap-2">
         <slot />

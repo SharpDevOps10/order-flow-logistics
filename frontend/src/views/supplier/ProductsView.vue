@@ -41,8 +41,7 @@ onMounted(async () => {
 <template>
   <div>
 
-    <!-- Header -->
-    <div class="flex items-center gap-3 mb-6">
+        <div class="flex items-center gap-3 mb-6">
       <button
         class="text-gray-400 hover:text-gray-700 transition-colors p-1.5 rounded-lg hover:bg-gray-100"
         @click="goBack"
@@ -58,13 +57,11 @@ onMounted(async () => {
       <AppButton @click="goToCreate">+ Add Product</AppButton>
     </div>
 
-    <!-- Loading -->
-    <div v-if="store.loading" class="flex items-center justify-center py-20">
+        <div v-if="store.loading" class="flex items-center justify-center py-20">
       <AppSpinner size="lg" />
     </div>
 
-    <!-- Error -->
-    <div
+        <div
       v-else-if="store.error"
       class="bg-red-50 border border-red-100 rounded-2xl p-6 text-center"
     >
@@ -74,37 +71,32 @@ onMounted(async () => {
       </AppButton>
     </div>
 
-    <!-- Empty -->
-    <div v-else-if="!store.products.length" class="text-center py-20">
+        <div v-else-if="!store.products.length" class="text-center py-20">
       <p class="text-4xl mb-3">📦</p>
       <p class="text-base font-semibold text-gray-900 mb-1">No products yet</p>
       <p class="text-sm text-gray-400 mb-6">Add your first product to this organization</p>
       <AppButton @click="goToCreate">Add product</AppButton>
     </div>
 
-    <!-- List -->
-    <div v-else class="flex flex-col gap-3">
+        <div v-else class="flex flex-col gap-3">
       <div
         v-for="product in store.products"
         :key="product.id"
         class="bg-white border border-gray-100 rounded-2xl p-5 flex items-center gap-4 hover:shadow-sm transition-shadow"
       >
-        <!-- Info -->
-        <div class="flex-1 min-w-0">
+                <div class="flex-1 min-w-0">
           <p class="text-base font-semibold text-gray-900 truncate">{{ product.name }}</p>
           <p v-if="product.description" class="text-sm text-gray-500 truncate mt-0.5">
             {{ product.description }}
           </p>
         </div>
 
-        <!-- Price -->
-        <div class="text-right flex-shrink-0">
+                <div class="text-right flex-shrink-0">
           <p class="text-base font-bold text-gray-900">₴{{ product.price.toFixed(2) }}</p>
           <p class="text-xs text-gray-400">ID: {{ product.id }}</p>
         </div>
 
-        <!-- Actions -->
-        <div class="flex items-center gap-2 flex-shrink-0">
+                <div class="flex items-center gap-2 flex-shrink-0">
           <AppButton variant="secondary" size="sm" @click="goToEdit(product.id)">
             Edit
           </AppButton>

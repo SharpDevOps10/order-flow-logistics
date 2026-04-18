@@ -6,7 +6,6 @@ import { RedisService } from '../redis/redis.service';
 import { CourierAssignmentService } from './courier-assignment.service';
 import type { OrderReadyEvent } from './courier-assignment.service';
 
-/** How long to remember a processed messageId (24h comfortably covers redelivery). */
 const IDEMPOTENCY_TTL_SECONDS = 24 * 60 * 60;
 
 @Controller()
@@ -27,9 +26,6 @@ export class OrderEventsConsumer {
     const originalMsg = context.getMessage() as unknown as ConsumeMessage;
 
     try {
-      // Idempotency: RabbitMQ may redeliver a message if the consumer crashes
-      // between processing and ack. An atomic SETNX in Redis lets us detect
-      // and short-circuit duplicates.
       if (event.messageId) {
         const isNew = await this.redisService.setIfNotExists(
           `event:seen:${event.messageId}`,
@@ -52,7 +48,6 @@ export class OrderEventsConsumer {
       this.logger.error(
         `Failed to process READY_FOR_DELIVERY for order #${event.orderId}: ${message}`,
       );
-      // Do not requeue — dead-letter queue catches these for manual inspection.
       channel.nack(originalMsg, false, false);
     }
   }

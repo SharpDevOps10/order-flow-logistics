@@ -13,7 +13,6 @@ interface NominatimResult {
 
 const NOMINATIM_BASE = 'https://nominatim.openstreetmap.org'
 
-/** TTL for geocoding cache entries (30 days — addresses rarely move). */
 const GEO_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
 interface CachedEntry<T> {
@@ -41,12 +40,10 @@ function writeCache<T>(key: string, value: T): void {
     const entry: CachedEntry<T> = { value, expiresAt: Date.now() + GEO_CACHE_TTL_MS }
     localStorage.setItem(key, JSON.stringify(entry))
   } catch {
-    // Ignore quota / private-mode errors — cache is best-effort.
   }
 }
 
 const fwdKey = (address: string) => `geo:fwd:${address.trim().toLowerCase()}`
-// Round to 4 decimals (~11 m) so nearby reverse lookups share a cache entry.
 const revKey = (lat: number, lng: number) => `geo:rev:${lat.toFixed(4)},${lng.toFixed(4)}`
 
 export const useGeocoding = () => {

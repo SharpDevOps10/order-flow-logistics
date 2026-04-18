@@ -35,11 +35,6 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     await this.client.del(key);
   }
 
-  /**
-   * Atomic SET-if-not-exists with a TTL. Returns true iff this call created
-   * the key (i.e. no prior value existed). Used as a distributed lock for
-   * idempotency checks on consumed messages.
-   */
   async setIfNotExists(
     key: string,
     value: string,

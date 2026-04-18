@@ -6,7 +6,6 @@ export enum OrderStatus {
   Delivered = 'DELIVERED',
 }
 
-// Matches backend schema.order_items
 export interface OrderItem {
   id: number
   orderId: number

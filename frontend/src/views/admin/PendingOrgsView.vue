@@ -26,8 +26,7 @@ onMounted(() => store.fetchPending())
 <template>
   <div>
 
-    <!-- Page header -->
-    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-3xl font-bold text-gray-900">Pending Organizations</h1>
         <p class="text-sm text-gray-400 mt-1">Organizations awaiting approval</p>
@@ -40,13 +39,11 @@ onMounted(() => store.fetchPending())
       </span>
     </div>
 
-    <!-- Loading -->
-    <div v-if="store.loading" class="flex items-center justify-center py-20">
+        <div v-if="store.loading" class="flex items-center justify-center py-20">
       <AppSpinner size="lg" />
     </div>
 
-    <!-- Error -->
-    <div
+        <div
       v-else-if="store.error"
       class="bg-red-50 border border-red-100 rounded-2xl p-6 text-center"
     >
@@ -56,15 +53,13 @@ onMounted(() => store.fetchPending())
       </AppButton>
     </div>
 
-    <!-- Empty -->
-    <div v-else-if="!store.organizations.length" class="text-center py-20">
+        <div v-else-if="!store.organizations.length" class="text-center py-20">
       <p class="text-4xl mb-3">✅</p>
       <p class="text-base font-semibold text-gray-900 mb-1">All organizations reviewed</p>
       <p class="text-sm text-gray-400">No pending applications</p>
     </div>
 
-    <!-- Grid -->
-    <div v-else class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        <div v-else class="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       <OrganizationCard
         v-for="org in store.organizations"
         :key="org.id"
