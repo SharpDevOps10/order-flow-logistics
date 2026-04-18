@@ -12,6 +12,8 @@ import { haversineKm } from '../routing/dijkstra';
 import { RoutingService } from '../routing/routing.service';
 
 export interface OrderReadyEvent {
+  /** Unique id per emitted message — used for consumer-side idempotency. */
+  messageId?: string;
   orderId: number;
   organizationId: number;
   orgLat: number;
