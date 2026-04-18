@@ -1,5 +1,4 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { OnEvent } from '@nestjs/event-emitter';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { and, count, eq } from 'drizzle-orm';
 import * as schema from '../../database/schema';
@@ -7,7 +6,6 @@ import { DATABASE_CONNECTION } from '../../database/database.module';
 import { RedisService } from '../redis/redis.service';
 import { MailService } from '../mail/mail.service';
 import { Role } from '../../common/enums/role.enum';
-import { ORDER_EVENTS } from '../../common/events/order.events';
 import { CourierGateway } from '../courier-gateway/courier.gateway';
 import { OrderStatus } from '../../common/enums/order-status.enum';
 import { haversineKm } from '../routing/dijkstra';
@@ -41,8 +39,11 @@ export class CourierAssignmentService {
     private readonly routingService: RoutingService,
   ) {}
 
-  @OnEvent(ORDER_EVENTS.READY_FOR_DELIVERY)
-  async handleOrderReady(event: OrderReadyEvent): Promise<void> {
+  /**
+   * Picks the best courier for an order using a distance+workload score
+   * and performs all side effects (DB update, WS notify, email, cache invalidation).
+   */
+  async assignCourierForOrder(event: OrderReadyEvent): Promise<void> {
     this.logger.log(`Auto-assigning courier for order #${event.orderId}`);
 
     const couriers = await this.db

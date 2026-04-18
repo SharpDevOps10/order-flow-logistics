@@ -1,0 +1,1 @@
+export const ORDER_EVENTS_CLIENT = Symbol('ORDER_EVENTS_CLIENT');

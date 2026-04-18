@@ -6,7 +6,6 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { and, eq, inArray } from 'drizzle-orm';
 import * as schema from '../../database/schema';
@@ -21,8 +20,8 @@ import {
 import { Role } from '../../common/enums/role.enum';
 import { MailService } from '../mail/mail.service';
 import { OrderReadyEvent } from '../courier-assignment/courier-assignment.service';
-import { ORDER_EVENTS } from '../../common/events/order.events';
 import { RoutingService } from '../routing/routing.service';
+import { OrderEventsPublisher } from '../messaging/order-events.publisher';
 
 @Injectable()
 export class OrdersService {
@@ -31,7 +30,7 @@ export class OrdersService {
   constructor(
     @Inject(DATABASE_CONNECTION) private db: NodePgDatabase<typeof schema>,
     private readonly mailService: MailService,
-    private readonly eventEmitter: EventEmitter2,
+    private readonly orderEventsPublisher: OrderEventsPublisher,
     private readonly routingService: RoutingService,
   ) {}
 
@@ -168,7 +167,7 @@ export class OrdersService {
           deliveryAddress: updated.deliveryAddress,
           totalAmount: updated.totalAmount,
         };
-        this.eventEmitter.emit(ORDER_EVENTS.READY_FOR_DELIVERY, event);
+        this.orderEventsPublisher.publishReadyForDelivery(event);
       } else {
         this.logger.warn(
           `Organization #${org.id} has no coordinates — skipping auto-assignment for order #${updated.id}`,
