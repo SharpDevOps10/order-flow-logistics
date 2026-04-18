@@ -74,47 +74,6 @@ class MinHeap {
   }
 }
 
-export function buildCompleteGraph(nodes: GraphNode[]): Map<number, Edge[]> {
-  const adj = new Map<number, Edge[]>();
-  for (const a of nodes) {
-    adj.set(a.id, []);
-    for (const b of nodes) {
-      if (a.id !== b.id) {
-        adj.get(a.id)!.push({ to: b.id, weight: haversineKm(a, b) });
-      }
-    }
-  }
-  return adj;
-}
-
-export function dijkstra(
-  nodes: GraphNode[],
-  adj: Map<number, Edge[]>,
-  sourceId: number,
-): Map<number, number> {
-  const dist = new Map<number, number>();
-  for (const n of nodes) dist.set(n.id, Infinity);
-  dist.set(sourceId, 0);
-
-  const pq = new MinHeap();
-  pq.push({ id: sourceId, dist: 0 });
-
-  while (pq.size > 0) {
-    const { id: u, dist: uDist } = pq.pop()!;
-    if (uDist > dist.get(u)!) continue; // stale entry
-
-    for (const edge of adj.get(u) ?? []) {
-      const alt = dist.get(u)! + edge.weight;
-      if (alt < dist.get(edge.to)!) {
-        dist.set(edge.to, alt);
-        pq.push({ id: edge.to, dist: alt });
-      }
-    }
-  }
-
-  return dist;
-}
-
 export interface OsmNode {
   id: number;
   lat: number;
@@ -226,37 +185,57 @@ export function reconstructPath(
   return path;
 }
 
-export function optimizeRoute(
-  nodes: GraphNode[],
+export interface DistanceMatrix {
+  distances: number[][];
+  paths: number[][][] | null;
+}
+
+export function computeOsmDistanceMatrix(
+  osmNodes: GraphNode[],
   adj: Map<number, Edge[]>,
-  startId: number,
-  deliveryIds: number[],
-): number[] {
-  const route: number[] = [startId];
-  const unvisited = new Set(deliveryIds);
+  waypointOsmIds: number[],
+): DistanceMatrix {
+  const n = waypointOsmIds.length;
+  const distances: number[][] = Array.from({ length: n }, () =>
+    new Array<number>(n).fill(0),
+  );
+  const paths: number[][][] = Array.from({ length: n }, () =>
+    new Array<number[]>(n).fill([]),
+  );
 
-  let currentId = startId;
-
-  while (unvisited.size > 0) {
-    const distances = dijkstra(nodes, adj, currentId);
-
-    let nearestId = -1;
-    let nearestDist = Infinity;
-
-    for (const id of unvisited) {
-      const d = distances.get(id) ?? Infinity;
-      if (d < nearestDist) {
-        nearestDist = d;
-        nearestId = id;
+  for (let i = 0; i < n; i++) {
+    const { distances: distMap, prev } = dijkstraWithPath(
+      osmNodes,
+      adj,
+      waypointOsmIds[i],
+    );
+    for (let j = 0; j < n; j++) {
+      if (i === j) {
+        paths[i][j] = [waypointOsmIds[i]];
+        continue;
       }
+      const d = distMap.get(waypointOsmIds[j]) ?? Infinity;
+      distances[i][j] = d;
+      paths[i][j] = Number.isFinite(d)
+        ? reconstructPath(prev, waypointOsmIds[j])
+        : [];
     }
-
-    if (nearestId === -1) break;
-
-    route.push(nearestId);
-    unvisited.delete(nearestId);
-    currentId = nearestId;
   }
 
-  return route;
+  return { distances, paths };
+}
+
+export function buildHaversineMatrix(waypoints: GraphNode[]): DistanceMatrix {
+  const n = waypoints.length;
+  const distances: number[][] = Array.from({ length: n }, () =>
+    new Array<number>(n).fill(0),
+  );
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const d = haversineKm(waypoints[i], waypoints[j]);
+      distances[i][j] = d;
+      distances[j][i] = d;
+    }
+  }
+  return { distances, paths: null };
 }

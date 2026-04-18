@@ -11,17 +11,15 @@ import * as schema from '../../database/schema';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { OrderStatus } from '../../common/enums/order-status.enum';
 import {
-  buildCompleteGraph,
+  buildHaversineMatrix,
   buildOsmGraph,
-  dijkstra,
-  dijkstraWithPath,
+  computeOsmDistanceMatrix,
+  DistanceMatrix,
   Edge,
   findNearestNode,
   GraphNode,
-  haversineKm,
-  optimizeRoute,
-  reconstructPath,
 } from './dijkstra';
+import { solveTSP } from './tsp-solvers';
 import { OsmService } from './osm.service';
 import { RedisService } from '../redis/redis.service';
 
@@ -173,97 +171,62 @@ export class RoutingService {
         lng: parseFloat(o.lng!),
       }));
 
-      const allNodes: GraphNode[] = [pickupNode, ...deliveryNodes];
-      const nodeMap = new Map(allNodes.map((n) => [n.id, n]));
+      const waypointNodes: GraphNode[] = [pickupNode, ...deliveryNodes];
       const orderDetailsMap = new Map(groupOrders.map((o) => [o.id, o]));
 
-      let orderedLogicalIds: number[];
-      let segmentDistancesKm: number[];
-      let geometry: [number, number][][] | null = null;
+      // 1. Build N×N distance matrix (OSM-based if available, Haversine otherwise)
+      //    plus per-pair OSM paths for later geometry rendering.
+      let matrix: DistanceMatrix;
+      let snappedOsmIds: number[] | null = null;
 
       if (osmGraph) {
-        const snapToOsm = (lat: number, lng: number) =>
-          findNearestNode(osmGraph.nodes, lat, lng).id;
-
-        const snappedPickupId = snapToOsm(pickupNode.lat, pickupNode.lng);
-        const snappedDeliveryIds = deliveryNodes.map((n) =>
-          snapToOsm(n.lat, n.lng),
+        snappedOsmIds = waypointNodes.map(
+          (wp) => findNearestNode(osmGraph.nodes, wp.lat, wp.lng).id,
         );
-
-        const logicalToOsm = new Map<number, number>();
-        const osmToLogical = new Map<number, number>();
-
-        logicalToOsm.set(pickupNode.id, snappedPickupId);
-        osmToLogical.set(snappedPickupId, pickupNode.id);
-
-        for (let i = 0; i < deliveryNodes.length; i++) {
-          logicalToOsm.set(deliveryNodes[i].id, snappedDeliveryIds[i]);
-          osmToLogical.set(snappedDeliveryIds[i], deliveryNodes[i].id);
-        }
-
-        const orderedOsmIds = optimizeRoute(
+        matrix = computeOsmDistanceMatrix(
           osmGraph.nodes,
           osmGraph.adj,
-          snappedPickupId,
-          snappedDeliveryIds,
+          snappedOsmIds,
         );
-
-        orderedLogicalIds = orderedOsmIds.map(
-          (osmId) => osmToLogical.get(osmId)!,
-        );
-
-        segmentDistancesKm = [0];
-        const segments: [number, number][][] = [];
-
-        for (let i = 0; i < orderedOsmIds.length - 1; i++) {
-          const fromId = orderedOsmIds[i];
-          const toId = orderedOsmIds[i + 1];
-
-          const { distances, prev } = dijkstraWithPath(
-            osmGraph.nodes,
-            osmGraph.adj,
-            fromId,
-          );
-
-          const roadDist = distances.get(toId) ?? Infinity;
-          segmentDistancesKm.push(
-            roadDist === Infinity
-              ? haversineKm(
-                  nodeMap.get(orderedLogicalIds[i])!,
-                  nodeMap.get(orderedLogicalIds[i + 1])!,
-                )
-              : roadDist,
-          );
-
-          const path = reconstructPath(prev, toId);
-          const segmentCoords: [number, number][] = [];
-          for (const nodeId of path) {
-            const coord = osmNodeCoordMap.get(nodeId);
-            if (coord) segmentCoords.push([coord.lat, coord.lng]);
-          }
-          if (segmentCoords.length > 1) segments.push(segmentCoords);
-        }
-
-        geometry = segments.length > 0 ? segments : null;
       } else {
-        const adj = buildCompleteGraph(allNodes);
-        orderedLogicalIds = optimizeRoute(
-          allNodes,
-          adj,
-          pickupNode.id,
-          deliveryNodes.map((n) => n.id),
-        );
-
-        segmentDistancesKm = [0];
-        for (let i = 1; i < orderedLogicalIds.length; i++) {
-          const prev = nodeMap.get(orderedLogicalIds[i - 1])!;
-          const curr = nodeMap.get(orderedLogicalIds[i])!;
-          const dists = dijkstra(allNodes, adj, prev.id);
-          segmentDistancesKm.push(
-            dists.get(curr.id) ?? haversineKm(prev, curr),
-          );
-        }
+        matrix = buildHaversineMatrix(waypointNodes);
       }
+
+      // 2. Solve the TSP on the matrix (Held-Karp for small n, greedy+2-opt above).
+      const tsp = solveTSP(matrix.distances, 0);
+      this.logger.log(
+        `TSP solved for org #${orgId} (n=${waypointNodes.length}, solver=${tsp.solver}): ${tsp.totalDistance.toFixed(2)} km` +
+          (tsp.greedyDistance !== undefined
+            ? ` (greedy=${tsp.greedyDistance.toFixed(2)} km, improvement=${(100 * (1 - tsp.totalDistance / tsp.greedyDistance)).toFixed(1)}%)`
+            : ''),
+      );
+
+      // 3. Map TSP indices back to logical node ids and precomputed distances.
+      const orderedLogicalIds = tsp.route.map((idx) => waypointNodes[idx].id);
+      const segmentDistancesKm: number[] = [0];
+      for (let i = 1; i < tsp.route.length; i++) {
+        segmentDistancesKm.push(
+          matrix.distances[tsp.route[i - 1]][tsp.route[i]],
+        );
+      }
+
+      // 4. Build per-segment geometry from the precomputed paths.
+      let geometry: [number, number][][] | null = null;
+      if (matrix.paths) {
+        const segments: [number, number][][] = [];
+        for (let i = 0; i < tsp.route.length - 1; i++) {
+          const path = matrix.paths[tsp.route[i]][tsp.route[i + 1]];
+          const coords: [number, number][] = [];
+          for (const nodeId of path) {
+            const c = osmNodeCoordMap.get(nodeId);
+            if (c) coords.push([c.lat, c.lng]);
+          }
+          if (coords.length > 1) segments.push(coords);
+        }
+        geometry = segments.length > 0 ? segments : null;
+      }
+
+      const nodeMap = new Map(waypointNodes.map((n) => [n.id, n]));
 
       const waypoints: RoutePoint[] = [];
       let totalDistanceKm = 0;
