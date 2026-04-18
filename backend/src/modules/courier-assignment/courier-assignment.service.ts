@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { and, count, eq } from 'drizzle-orm';
+import { and, count, eq, inArray } from 'drizzle-orm';
 import * as schema from '../../database/schema';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { RedisService } from '../redis/redis.service';
@@ -71,7 +71,10 @@ export class CourierAssignmentService {
         .where(
           and(
             eq(schema.orders.courierId, courier.id),
-            eq(schema.orders.status, OrderStatus.READY_FOR_DELIVERY),
+            inArray(schema.orders.status, [
+              OrderStatus.READY_FOR_DELIVERY,
+              OrderStatus.PICKED_UP,
+            ]),
           ),
         );
       workloadMap.set(courier.id, Number(row.total));

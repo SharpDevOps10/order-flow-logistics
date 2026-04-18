@@ -15,6 +15,8 @@ export const orderStatusEnum = pgEnum('order_status', [
   OrderStatus.PENDING,
   OrderStatus.ACCEPTED,
   OrderStatus.READY_FOR_DELIVERY,
+  OrderStatus.PICKED_UP,
+  OrderStatus.DELIVERED,
 ]);
 
 export const userRoleEnum = pgEnum('user_role', [

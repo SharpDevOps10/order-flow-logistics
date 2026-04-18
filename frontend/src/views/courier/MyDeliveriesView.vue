@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useOrdersStore } from '@/stores/orders.store'
 import { useToast } from '@/composables/useToast'
 import { OrderStatus } from '@/types/order.types'
+import { OrdersApi } from '@/api/orders.api'
 import AppButton from '@/components/common/AppButton.vue'
 import AppBadge from '@/components/common/AppBadge.vue'
 import AppSpinner from '@/components/common/AppSpinner.vue'
@@ -21,6 +22,34 @@ const formatDate = (dateStr: string | null): string => {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+const statusBadgeVariant = (status: OrderStatus): 'green' | 'blue' | 'default' => {
+  if (status === OrderStatus.ReadyForDelivery) return 'green'
+  if (status === OrderStatus.PickedUp) return 'blue'
+  return 'default'
+}
+
+const handlePickup = async (orderId: number) => {
+  try {
+    await OrdersApi.pickup(orderId)
+    toast.success(`Order #${orderId} marked as picked up`)
+    await store.fetchCourier()
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Failed to mark as picked up'
+    toast.error(msg)
+  }
+}
+
+const handleDeliver = async (orderId: number) => {
+  try {
+    await OrdersApi.deliver(orderId)
+    toast.success(`Order #${orderId} delivered`)
+    await store.fetchCourier()
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : 'Failed to mark as delivered'
+    toast.error(msg)
+  }
 }
 
 onMounted(async () => {
@@ -92,7 +121,7 @@ onMounted(async () => {
           <div>
             <div class="flex items-center gap-2">
               <span class="text-base font-semibold text-gray-900">Order #{{ order.id }}</span>
-              <AppBadge variant="green">{{ OrderStatus.ReadyForDelivery }}</AppBadge>
+              <AppBadge :variant="statusBadgeVariant(order.status)">{{ order.status }}</AppBadge>
             </div>
             <p class="text-xs text-gray-400 mt-1">{{ formatDate(order.createdAt) }}</p>
           </div>
@@ -115,6 +144,25 @@ onMounted(async () => {
                 : 'Not provided' }}
             </p>
           </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="flex items-center justify-end gap-2">
+          <AppButton
+            v-if="order.status === OrderStatus.ReadyForDelivery"
+            size="sm"
+            variant="secondary"
+            @click="handlePickup(order.id)"
+          >
+            Mark as Picked Up
+          </AppButton>
+          <AppButton
+            v-if="order.status === OrderStatus.PickedUp"
+            size="sm"
+            @click="handleDeliver(order.id)"
+          >
+            Mark as Delivered
+          </AppButton>
         </div>
 
       </div>

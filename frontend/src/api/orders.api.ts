@@ -42,4 +42,14 @@ export const OrdersApi = {
     const { data } = await axiosInstance.delete<Order>(`/orders/${id}`)
     return data
   },
+
+  pickup: async (id: number): Promise<Order> => {
+    const { data } = await axiosInstance.post<Order>(`/orders/${id}/pickup`)
+    return data
+  },
+
+  deliver: async (id: number): Promise<Order> => {
+    const { data } = await axiosInstance.post<Order>(`/orders/${id}/deliver`)
+    return data
+  },
 }

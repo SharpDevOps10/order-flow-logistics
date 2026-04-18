@@ -286,14 +286,73 @@ export class OrdersService {
   }
 
   async findCourierOrders(courierId: number) {
+    // Active work = not yet delivered. Includes PICKED_UP so courier can
+    // track in-progress deliveries.
     return this.db
       .select()
       .from(schema.orders)
       .where(
         and(
           eq(schema.orders.courierId, courierId),
-          eq(schema.orders.status, OrderStatus.READY_FOR_DELIVERY),
+          inArray(schema.orders.status, [
+            OrderStatus.READY_FOR_DELIVERY,
+            OrderStatus.PICKED_UP,
+          ]),
         ),
       );
+  }
+
+  /**
+   * Courier marks an order as picked up from the supplier.
+   * Once in PICKED_UP status, the batch rebalancer will not touch the order.
+   */
+  async markPickedUp(orderId: number, courierId: number) {
+    return this.transitionCourierStatus(
+      orderId,
+      courierId,
+      OrderStatus.READY_FOR_DELIVERY,
+      OrderStatus.PICKED_UP,
+    );
+  }
+
+  /** Courier confirms successful delivery. */
+  async markDelivered(orderId: number, courierId: number) {
+    return this.transitionCourierStatus(
+      orderId,
+      courierId,
+      OrderStatus.PICKED_UP,
+      OrderStatus.DELIVERED,
+    );
+  }
+
+  private async transitionCourierStatus(
+    orderId: number,
+    courierId: number,
+    from: OrderStatus,
+    to: OrderStatus,
+  ) {
+    const [order] = await this.db
+      .select()
+      .from(schema.orders)
+      .where(eq(schema.orders.id, orderId));
+
+    if (!order || order.courierId !== courierId) {
+      throw new NotFoundException('Order not found or not assigned to you');
+    }
+    if (order.status !== from) {
+      throw new BadRequestException(
+        `Cannot transition from ${order.status} to ${to}`,
+      );
+    }
+
+    const [updated] = await this.db
+      .update(schema.orders)
+      .set({ status: to })
+      .where(eq(schema.orders.id, orderId))
+      .returning();
+
+    await this.routingService.invalidateCourierRoute(courierId);
+
+    return updated;
   }
 }

@@ -2,6 +2,8 @@ export enum OrderStatus {
   Pending = 'PENDING',
   Accepted = 'ACCEPTED',
   ReadyForDelivery = 'READY_FOR_DELIVERY',
+  PickedUp = 'PICKED_UP',
+  Delivered = 'DELIVERED',
 }
 
 // Matches backend schema.order_items

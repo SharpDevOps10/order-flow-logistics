@@ -1,21 +1,7 @@
-/**
- * TSP solvers that operate on a precomputed N×N distance matrix.
- * All solvers handle the OPEN variant (no return to start) and keep the
- * start vertex at position 0 of the result.
- */
-
-/** Switch to Held-Karp below this size; greedy+2-opt above. */
 export const HELD_KARP_LIMIT = 12;
 
-/** Numerical tolerance for accepting improving swaps in 2-opt. */
 const EPSILON = 1e-9;
 
-// ─── Greedy nearest-neighbour ────────────────────────────────────────────────
-
-/**
- * Starting at `start`, repeatedly jumps to the closest unvisited vertex.
- * O(n²) on a precomputed matrix.
- */
 export function greedyNearestNeighbor(
   matrix: number[][],
   start: number,
@@ -36,7 +22,7 @@ export function greedyNearestNeighbor(
         best = v;
       }
     }
-    if (best === -1) break; // unreachable — stop early
+    if (best === -1) break;
     route.push(best);
     visited[best] = true;
     current = best;
@@ -45,17 +31,9 @@ export function greedyNearestNeighbor(
   return route;
 }
 
-// ─── 2-opt local search ──────────────────────────────────────────────────────
-
-/**
- * Iteratively removes edge crossings by reversing sub-paths.
- * The start vertex at position 0 is preserved (we never touch it).
- *
- * Each pass is O(n²); typically converges in 2–5 passes.
- */
 export function twoOptRefine(route: number[], matrix: number[][]): number[] {
   const n = route.length;
-  if (n < 4) return route.slice(); // no non-adjacent pairs to swap
+  if (n < 4) return route.slice();
 
   const result = route.slice();
   let improved = true;
@@ -69,8 +47,6 @@ export function twoOptRefine(route: number[], matrix: number[][]): number[] {
         const c = result[j];
         const d = result[j + 1];
 
-        // Cost change if we replace edges (a,b) + (c,d) with (a,c) + (b,d)
-        // which reverses the segment result[i+1..j].
         const delta = matrix[a][c] + matrix[b][d] - matrix[a][b] - matrix[c][d];
 
         if (delta < -EPSILON) {
@@ -92,20 +68,6 @@ function reverseInPlace(arr: number[], from: number, to: number): void {
   }
 }
 
-// ─── Held-Karp exact DP (bitmask) ────────────────────────────────────────────
-
-/**
- * Exact TSP for small instances via bitmask dynamic programming.
- *
- *   dp[mask][i] = minimum cost of a path that starts at `start`, visits
- *                 exactly the vertices in `mask`, and ends at vertex `i`.
- *
- * For OPEN TSP we take the minimum over all final vertices ≠ start
- * (no return-to-start term).
- *
- * Complexity: O(n² · 2ⁿ) time, O(n · 2ⁿ) memory.
- * Feasible up to ~12–15 vertices.
- */
 export function heldKarpExact(matrix: number[][], start: number): number[] {
   const n = matrix.length;
   if (n === 1) return [start];
@@ -113,24 +75,24 @@ export function heldKarpExact(matrix: number[][], start: number): number[] {
   const FULL = (1 << n) - 1;
   const size = 1 << n;
 
-  // dp and parent as flat typed arrays for speed.
   const dp = new Float64Array(size * n).fill(Infinity);
   const parent = new Int16Array(size * n).fill(-1);
   const idx = (mask: number, i: number) => mask * n + i;
+  const bit = (i: number) => 1 << i;
 
-  dp[idx(1 << start, start)] = 0;
+  const startMask = bit(start);
+  dp[idx(startMask, start)] = 0;
 
   for (let mask = 0; mask < size; mask++) {
-    if (!(mask & (1 << start))) continue;
+    if (!(mask & bit(start))) continue;
     for (let last = 0; last < n; last++) {
-      if (!(mask & (1 << last))) continue;
+      if (!(mask & bit(last))) continue;
       const base = dp[idx(mask, last)];
       if (!Number.isFinite(base)) continue;
 
-      // Try extending the path by one unvisited vertex.
       for (let next = 0; next < n; next++) {
-        if (mask & (1 << next)) continue;
-        const newMask = mask | (1 << next);
+        if (mask & bit(next)) continue;
+        const newMask = mask | bit(next);
         const cand = base + matrix[last][next];
         if (cand < dp[idx(newMask, next)]) {
           dp[idx(newMask, next)] = cand;
@@ -140,7 +102,6 @@ export function heldKarpExact(matrix: number[][], start: number): number[] {
     }
   }
 
-  // Open-TSP: pick the best ending vertex (any except start).
   let bestEnd = -1;
   let bestCost = Infinity;
   for (let i = 0; i < n; i++) {
@@ -152,34 +113,26 @@ export function heldKarpExact(matrix: number[][], start: number): number[] {
   }
   if (bestEnd === -1) return [start];
 
-  // Reconstruct path by walking parent pointers backwards.
   const path: number[] = [];
   let mask = FULL;
   let curr: number = bestEnd;
   while (curr !== -1) {
     path.push(curr);
     const prev = parent[idx(mask, curr)];
-    mask ^= 1 << curr;
+    mask ^= bit(curr);
     curr = prev;
   }
   path.reverse();
   return path;
 }
 
-// ─── Dispatcher ──────────────────────────────────────────────────────────────
-
 export interface TspResult {
-  /** Final ordered vertex indices (starts with `start`). */
   route: number[];
-  /** Total route length based on the distance matrix. */
   totalDistance: number;
-  /** Which algorithm was used. */
   solver: 'held-karp' | 'greedy+2opt' | 'greedy';
-  /** For 'greedy+2opt': distance before 2-opt refinement (for logging/benchmarks). */
   greedyDistance?: number;
 }
 
-/** Total length of a route on the given matrix. */
 function routeLength(route: number[], matrix: number[][]): number {
   let sum = 0;
   for (let i = 0; i < route.length - 1; i++) {
@@ -188,11 +141,6 @@ function routeLength(route: number[], matrix: number[][]): number {
   return sum;
 }
 
-/**
- * Chooses the right TSP algorithm for the problem size:
- *  - n ≤ HELD_KARP_LIMIT → exact optimum via Held-Karp
- *  - n >  HELD_KARP_LIMIT → greedy NN + 2-opt refinement
- */
 export function solveTSP(matrix: number[][], start: number): TspResult {
   const n = matrix.length;
   if (n <= 1) {

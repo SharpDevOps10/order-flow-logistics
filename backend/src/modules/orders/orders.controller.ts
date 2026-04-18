@@ -76,4 +76,22 @@ export class OrdersController {
   findCourierOrders(@GetCurrentUser('sub') courierId: number) {
     return this.ordersService.findCourierOrders(courierId);
   }
+
+  @Roles(Role.COURIER)
+  @Post(':id/pickup')
+  pickup(
+    @Param('id', ParseIntPipe) id: number,
+    @GetCurrentUser('sub') courierId: number,
+  ) {
+    return this.ordersService.markPickedUp(id, courierId);
+  }
+
+  @Roles(Role.COURIER)
+  @Post(':id/deliver')
+  deliver(
+    @Param('id', ParseIntPipe) id: number,
+    @GetCurrentUser('sub') courierId: number,
+  ) {
+    return this.ordersService.markDelivered(id, courierId);
+  }
 }
