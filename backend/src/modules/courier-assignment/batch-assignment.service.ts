@@ -1,5 +1,4 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { and, eq, inArray } from 'drizzle-orm';
 import * as schema from '../../database/schema';
@@ -61,16 +60,6 @@ export class BatchAssignmentService {
     private readonly routingService: RoutingService,
     private readonly courierGateway: CourierGateway,
   ) {}
-
-  @Cron(CronExpression.EVERY_5_MINUTES)
-  async scheduledRebalance(): Promise<void> {
-    try {
-      await this.rebalance();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      this.logger.error(`Scheduled rebalance failed: ${msg}`);
-    }
-  }
 
   async rebalance(): Promise<RebalanceResult> {
     const orders = await this.loadEligibleOrders();
