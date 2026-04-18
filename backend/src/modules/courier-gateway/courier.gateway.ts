@@ -23,6 +23,10 @@ interface LocationPayload {
 
 interface ServerToClientEvents {
   'order:assigned': (payload: { orderId: number }) => void;
+  'order:reassigned_away': (payload: {
+    orderId: number;
+    reason: 'optimization';
+  }) => void;
 }
 
 interface SocketData {
@@ -88,6 +92,23 @@ export class CourierGateway
     if (client) {
       client.emit('order:assigned', { orderId });
       this.logger.log(`Notified courier #${courierId} about order #${orderId}`);
+    }
+  }
+
+  /**
+   * Sent to a courier when the batch rebalancer moves an order away from them
+   * so the UI can explain why the order vanished from their list.
+   */
+  notifyReassignedAway(courierId: number, orderId: number): void {
+    const client = this.clients.get(courierId);
+    if (client) {
+      client.emit('order:reassigned_away', {
+        orderId,
+        reason: 'optimization',
+      });
+      this.logger.log(
+        `Notified courier #${courierId} that order #${orderId} was reassigned away`,
+      );
     }
   }
 

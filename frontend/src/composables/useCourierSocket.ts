@@ -3,9 +3,14 @@ import { io, type Socket } from 'socket.io-client'
 import { useAuthStore } from '@/stores/auth.store'
 import { useToast } from '@/composables/useToast'
 import { useRoutingStore } from '@/stores/routing.store'
+import { useOrdersStore } from '@/stores/orders.store'
 
 interface ServerToClientEvents {
   'order:assigned': (payload: { orderId: number }) => void
+  'order:reassigned_away': (payload: {
+    orderId: number
+    reason: 'optimization'
+  }) => void
 }
 
 interface ClientToServerEvents {
@@ -19,6 +24,7 @@ export const useCourierSocket = () => {
   const authStore = useAuthStore()
   const toast = useToast()
   const routingStore = useRoutingStore()
+  const ordersStore = useOrdersStore()
 
   let socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null
   let geoWatchId: number | null = null
@@ -46,6 +52,15 @@ export const useCourierSocket = () => {
     socket.on('order:assigned', ({ orderId }) => {
       toast.success(`New delivery assigned: order #${orderId}`)
       routingStore.fetchRoute()
+      ordersStore.fetchCourier()
+    })
+
+    socket.on('order:reassigned_away', ({ orderId }) => {
+      toast.info(
+        `Order #${orderId} was reassigned to another courier for route optimization`,
+      )
+      routingStore.fetchRoute()
+      ordersStore.fetchCourier()
     })
   }
 

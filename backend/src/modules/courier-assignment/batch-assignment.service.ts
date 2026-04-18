@@ -142,7 +142,10 @@ export class BatchAssignmentService {
           `(slot ${newSlotIdx}, saved ${savedKm.toFixed(2)} km)`,
       );
 
-      if (order.courierId !== null) touchedCouriers.add(order.courierId);
+      if (order.courierId !== null) {
+        touchedCouriers.add(order.courierId);
+        this.courierGateway.notifyReassignedAway(order.courierId, order.id);
+      }
       touchedCouriers.add(newCourierId);
 
       this.courierGateway.notifyCourier(newCourierId, order.id);
