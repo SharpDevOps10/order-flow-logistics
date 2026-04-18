@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OsmNode, OsmWay } from './dijkstra';
+import { RedisService } from '../redis/redis.service';
 
 interface BoundingBox {
   minLat: number;
@@ -32,27 +33,61 @@ const OVERPASS_ENDPOINTS = [
 export class OsmService {
   private readonly logger = new Logger(OsmService.name);
 
-  /** Padding in degrees added around the delivery area (~3 km). */
   private readonly BBOX_PADDING = 0.03;
+  private readonly CACHE_GRID = 0.05;
+  private readonly CACHE_TTL_SECONDS = 7 * 24 * 60 * 60;
+
+  constructor(private readonly redisService: RedisService) {}
 
   computeBoundingBox(points: { lat: number; lng: number }[]): BoundingBox {
     const lats = points.map((p) => p.lat);
     const lngs = points.map((p) => p.lng);
+    const minLat = Math.min(...lats) - this.BBOX_PADDING;
+    const maxLat = Math.max(...lats) + this.BBOX_PADDING;
+    const minLng = Math.min(...lngs) - this.BBOX_PADDING;
+    const maxLng = Math.max(...lngs) + this.BBOX_PADDING;
+
+    const g = this.CACHE_GRID;
     return {
-      minLat: Math.min(...lats) - this.BBOX_PADDING,
-      minLng: Math.min(...lngs) - this.BBOX_PADDING,
-      maxLat: Math.max(...lats) + this.BBOX_PADDING,
-      maxLng: Math.max(...lngs) + this.BBOX_PADDING,
+      minLat: Math.floor(minLat / g) * g,
+      minLng: Math.floor(minLng / g) * g,
+      maxLat: Math.ceil(maxLat / g) * g,
+      maxLng: Math.ceil(maxLng / g) * g,
     };
+  }
+
+  private cacheKey(bbox: BoundingBox): string {
+    const f = (n: number) => n.toFixed(2);
+    return `osm:${f(bbox.minLat)},${f(bbox.minLng)},${f(bbox.maxLat)},${f(bbox.maxLng)}`;
   }
 
   async fetchRoadNetwork(
     bbox: BoundingBox,
   ): Promise<{ nodes: OsmNode[]; ways: OsmWay[] } | null> {
+    const key = this.cacheKey(bbox);
+
+    try {
+      const cached = await this.redisService.get(key);
+      if (cached) {
+        const parsed = JSON.parse(cached) as {
+          nodes: OsmNode[];
+          ways: OsmWay[];
+        };
+        this.logger.log(
+          `OSM cache HIT for ${key}: ${parsed.nodes.length} nodes, ${parsed.ways.length} ways`,
+        );
+        return parsed;
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Redis read failed for ${key}: ${(err as Error).message}`,
+      );
+    }
+
+    this.logger.log(`OSM cache MISS for ${key} — querying Overpass`);
+
     const { minLat, minLng, maxLat, maxLng } = bbox;
 
-    // Compact query (no whitespace) to stay well under the 2048-byte POST limit
-    // enforced by some Overpass mirrors.
     const query =
       `[out:json][timeout:60];` +
       `(way["highway"~"^(motorway|trunk|primary|secondary|tertiary|residential|unclassified|service)$"]` +
@@ -109,6 +144,21 @@ export class OsmService {
         this.logger.log(
           `OSM road network loaded via ${endpoint}: ${nodes.length} nodes, ${ways.length} ways`,
         );
+
+        try {
+          await this.redisService.set(
+            key,
+            JSON.stringify({ nodes, ways }),
+            this.CACHE_TTL_SECONDS,
+          );
+          this.logger.log(
+            `OSM cached under ${key} for ${this.CACHE_TTL_SECONDS}s`,
+          );
+        } catch (err) {
+          this.logger.warn(
+            `Redis write failed for ${key}: ${(err as Error).message}`,
+          );
+        }
 
         return { nodes, ways };
       } catch (err) {
