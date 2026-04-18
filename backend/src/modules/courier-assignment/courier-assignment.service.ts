@@ -11,6 +11,7 @@ import { ORDER_EVENTS } from '../../common/events/order.events';
 import { CourierGateway } from '../courier-gateway/courier.gateway';
 import { OrderStatus } from '../../common/enums/order-status.enum';
 import { haversineKm } from '../routing/dijkstra';
+import { RoutingService } from '../routing/routing.service';
 
 export interface OrderReadyEvent {
   orderId: number;
@@ -37,6 +38,7 @@ export class CourierAssignmentService {
     private readonly redisService: RedisService,
     private readonly mailService: MailService,
     private readonly courierGateway: CourierGateway,
+    private readonly routingService: RoutingService,
   ) {}
 
   @OnEvent(ORDER_EVENTS.READY_FOR_DELIVERY)
@@ -134,6 +136,8 @@ export class CourierAssignmentService {
       .update(schema.orders)
       .set({ courierId: best.courier.id })
       .where(eq(schema.orders.id, event.orderId));
+
+    await this.routingService.invalidateCourierRoute(best.courier.id);
 
     this.courierGateway.notifyCourier(best.courier.id, event.orderId);
 

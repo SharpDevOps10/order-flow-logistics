@@ -6,5 +6,6 @@ import { OsmService } from './osm.service';
 @Module({
   controllers: [RoutingController],
   providers: [RoutingService, OsmService],
+  exports: [RoutingService],
 })
 export class RoutingModule {}

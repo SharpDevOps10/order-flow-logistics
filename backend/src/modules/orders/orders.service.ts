@@ -22,6 +22,7 @@ import { Role } from '../../common/enums/role.enum';
 import { MailService } from '../mail/mail.service';
 import { OrderReadyEvent } from '../courier-assignment/courier-assignment.service';
 import { ORDER_EVENTS } from '../../common/events/order.events';
+import { RoutingService } from '../routing/routing.service';
 
 @Injectable()
 export class OrdersService {
@@ -31,6 +32,7 @@ export class OrdersService {
     @Inject(DATABASE_CONNECTION) private db: NodePgDatabase<typeof schema>,
     private readonly mailService: MailService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly routingService: RoutingService,
   ) {}
 
   async create(dto: CreateOrderDto, clientId: number) {
@@ -148,6 +150,12 @@ export class OrdersService {
       .where(eq(schema.orders.id, orderId))
       .returning();
 
+    // Any status change affects whether this order appears in the courier's
+    // optimised route (only READY_FOR_DELIVERY orders are included).
+    if (updated.courierId) {
+      await this.routingService.invalidateCourierRoute(updated.courierId);
+    }
+
     if (dto.status === OrderStatus.READY_FOR_DELIVERY) {
       const org = row.organizations;
       if (org.lat && org.lng) {
@@ -215,11 +223,20 @@ export class OrdersService {
       .from(schema.orderItems)
       .where(eq(schema.orderItems.orderId, orderId));
 
+    const previousCourierId = row.orders.courierId;
+
     const [updated] = await this.db
       .update(schema.orders)
       .set({ courierId: dto.courierId })
       .where(eq(schema.orders.id, orderId))
       .returning();
+
+    // Invalidate the new courier's route cache, and the previous one if
+    // this is a reassignment, so both get fresh data next request.
+    await this.routingService.invalidateCourierRoute(dto.courierId);
+    if (previousCourierId && previousCourierId !== dto.courierId) {
+      await this.routingService.invalidateCourierRoute(previousCourierId);
+    }
 
     // Send email to courier
     try {

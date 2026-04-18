@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
@@ -22,6 +23,11 @@ import {
   reconstructPath,
 } from './dijkstra';
 import { OsmService } from './osm.service';
+import { RedisService } from '../redis/redis.service';
+
+export const routeCacheKey = (courierId: number) =>
+  `route:courier:${courierId}`;
+const ROUTE_CACHE_TTL_SECONDS = 60 * 60;
 
 export interface RoutePoint {
   type: 'PICKUP' | 'DELIVERY';
@@ -36,7 +42,6 @@ export interface RoutePoint {
 export interface OptimizedRoute {
   totalDistanceKm: number;
   waypoints: RoutePoint[];
-  /** Road geometry grouped by segment (waypoint-to-waypoint), each as [lat, lng] pairs. */
   geometry: [number, number][][] | null;
 }
 
@@ -46,12 +51,42 @@ function orgNodeId(orgId: number): number {
 
 @Injectable()
 export class RoutingService {
+  private readonly logger = new Logger(RoutingService.name);
+
   constructor(
     @Inject(DATABASE_CONNECTION) private db: NodePgDatabase<typeof schema>,
     private readonly osmService: OsmService,
+    private readonly redisService: RedisService,
   ) {}
 
+  async invalidateCourierRoute(courierId: number): Promise<void> {
+    try {
+      await this.redisService.del(routeCacheKey(courierId));
+      this.logger.log(`Route cache invalidated for courier #${courierId}`);
+    } catch (err) {
+      this.logger.warn(
+        `Failed to invalidate route cache for courier #${courierId}: ${(err as Error).message}`,
+      );
+    }
+  }
+
   async getOptimizedRoute(courierId: number): Promise<OptimizedRoute[]> {
+    const key = routeCacheKey(courierId);
+
+    try {
+      const cached = await this.redisService.get(key);
+      if (cached) {
+        this.logger.log(`Route cache HIT for courier #${courierId}`);
+        return JSON.parse(cached) as OptimizedRoute[];
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Route cache read failed for courier #${courierId}: ${(err as Error).message}`,
+      );
+    }
+
+    this.logger.log(`Route cache MISS for courier #${courierId} — computing`);
+
     const orders = await this.db
       .select()
       .from(schema.orders)
@@ -268,6 +303,21 @@ export class RoutingService {
         waypoints,
         geometry,
       });
+    }
+
+    try {
+      await this.redisService.set(
+        key,
+        JSON.stringify(routes),
+        ROUTE_CACHE_TTL_SECONDS,
+      );
+      this.logger.log(
+        `Route cached for courier #${courierId} (${routes.length} route(s), TTL ${ROUTE_CACHE_TTL_SECONDS}s)`,
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Route cache write failed for courier #${courierId}: ${(err as Error).message}`,
+      );
     }
 
     return routes;
