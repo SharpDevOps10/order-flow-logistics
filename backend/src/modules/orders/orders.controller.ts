@@ -71,6 +71,15 @@ export class OrdersController {
     return this.ordersService.cancel(id, clientId);
   }
 
+  @Roles(Role.CLIENT)
+  @Get(':id/eta')
+  getEta(
+    @Param('id', ParseIntPipe) id: number,
+    @GetCurrentUser('sub') clientId: number,
+  ) {
+    return this.ordersService.getOrderEta(id, clientId);
+  }
+
   @Roles(Role.COURIER)
   @Get('courier')
   findCourierOrders(@GetCurrentUser('sub') courierId: number) {

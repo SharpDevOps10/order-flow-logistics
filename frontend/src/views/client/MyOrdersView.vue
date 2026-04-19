@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useOrdersStore } from '@/stores/orders.store'
 import { useOrganizationsStore } from '@/stores/organizations.store'
 import { useToast } from '@/composables/useToast'
 import { OrderStatus } from '@/types/order.types'
 import type { Order } from '@/types/order.types'
+import { OrdersApi, type OrderEtaResponse } from '@/api/orders.api'
 import AppBadge from '@/components/common/AppBadge.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppSpinner from '@/components/common/AppSpinner.vue'
@@ -85,9 +86,55 @@ const handleCancel = async () => {
   }
 }
 
+const etas = ref<Map<number, OrderEtaResponse>>(new Map())
+let etaTimer: ReturnType<typeof setInterval> | null = null
+
+const isEtaEligible = (order: Order): boolean =>
+  order.status === OrderStatus.ReadyForDelivery ||
+  order.status === OrderStatus.PickedUp
+
+const refreshEtas = async () => {
+  const eligible = store.orders.filter(isEtaEligible)
+  const results = await Promise.all(
+    eligible.map(async (o) => {
+      try {
+        return [o.id, await OrdersApi.getEta(o.id)] as const
+      } catch {
+        return null
+      }
+    }),
+  )
+  const next = new Map<number, OrderEtaResponse>()
+  for (const entry of results) {
+    if (entry) next.set(entry[0], entry[1])
+  }
+  etas.value = next
+}
+
+const formatEtaLine = (eta: OrderEtaResponse): string => {
+  if (!eta.available) return ''
+  const arrival = new Date(eta.arrivalAt)
+  const hh = arrival.getHours().toString().padStart(2, '0')
+  const mm = arrival.getMinutes().toString().padStart(2, '0')
+  const mins = Math.max(0, eta.minutes)
+  return `arrives in ~${mins} min · ${hh}:${mm}`
+}
+
+const etaUnavailableLabel = (reason: string): string => {
+  if (reason === 'courier-offline') return 'Courier is offline'
+  if (reason === 'no-route') return 'Route unavailable'
+  return 'ETA unavailable'
+}
+
 onMounted(async () => {
   await Promise.all([store.fetchMy(), orgsStore.fetchAll()])
   if (store.error) toast.error(store.error)
+  await refreshEtas()
+  etaTimer = setInterval(refreshEtas, 60_000)
+})
+
+onBeforeUnmount(() => {
+  if (etaTimer) clearInterval(etaTimer)
 })
 </script>
 
@@ -166,6 +213,30 @@ onMounted(async () => {
               {{ order.courierId ? `Assigned (ID: ${order.courierId})` : 'Not assigned yet' }}
             </p>
           </div>
+        </div>
+
+        <div
+          v-if="isEtaEligible(order) && etas.get(order.id)"
+          class="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5"
+        >
+          <svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="9" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2" />
+          </svg>
+          <template v-if="etas.get(order.id)!.available">
+            <div class="flex-1">
+              <p class="text-sm font-medium text-blue-800">
+                Your order {{ formatEtaLine(etas.get(order.id)!) }}
+              </p>
+              <p v-if="(etas.get(order.id) as { stopsAhead?: number }).stopsAhead! > 0" class="text-xs text-blue-600/70 mt-0.5">
+                {{ (etas.get(order.id) as { stopsAhead: number }).stopsAhead }} {{ (etas.get(order.id) as { stopsAhead: number }).stopsAhead === 1 ? 'delivery' : 'deliveries' }} ahead of you
+                <span v-if="(etas.get(order.id) as { isFallbackSpeed?: boolean }).isFallbackSpeed" class="ml-1 text-[10px] text-blue-500/60">(approximate)</span>
+              </p>
+            </div>
+          </template>
+          <template v-else>
+            <p class="text-sm text-gray-500">{{ etaUnavailableLabel(etas.get(order.id)!.reason) }}</p>
+          </template>
         </div>
 
                 <div v-if="canShowRoute(order)">

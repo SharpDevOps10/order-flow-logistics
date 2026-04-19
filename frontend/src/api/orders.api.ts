@@ -7,6 +7,21 @@ import type {
 import type { OrderStatus } from '@/types/order.types'
 import { axiosInstance } from './axios.instance'
 
+export type OrderEtaResponse =
+  | {
+      available: true
+      distanceKm: number
+      minutes: number
+      arrivalAt: string
+      stopsAhead: number
+      avgSpeedKmh: number
+      isFallbackSpeed: boolean
+    }
+  | {
+      available: false
+      reason: 'order-not-in-transit' | 'courier-offline' | 'no-route' | 'order-not-in-route'
+    }
+
 export const OrdersApi = {
   getMy: async (): Promise<Order[]> => {
     const { data } = await axiosInstance.get<Order[]>('/orders/my')
@@ -50,6 +65,11 @@ export const OrdersApi = {
 
   deliver: async (id: number): Promise<Order> => {
     const { data } = await axiosInstance.post<Order>(`/orders/${id}/deliver`)
+    return data
+  },
+
+  getEta: async (id: number): Promise<OrderEtaResponse> => {
+    const { data } = await axiosInstance.get<OrderEtaResponse>(`/orders/${id}/eta`)
     return data
   },
 }

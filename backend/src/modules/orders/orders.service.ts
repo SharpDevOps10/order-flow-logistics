@@ -22,6 +22,8 @@ import { MailService } from '../mail/mail.service';
 import { OrderReadyEvent } from '../courier-assignment/courier-assignment.service';
 import { RoutingService } from '../routing/routing.service';
 import { OrderEventsPublisher } from '../messaging/order-events.publisher';
+import { CourierStatsService } from '../courier-gateway/courier-stats.service';
+import { haversineKm } from '../routing/dijkstra';
 
 @Injectable()
 export class OrdersService {
@@ -32,6 +34,7 @@ export class OrdersService {
     private readonly mailService: MailService,
     private readonly orderEventsPublisher: OrderEventsPublisher,
     private readonly routingService: RoutingService,
+    private readonly courierStatsService: CourierStatsService,
   ) {}
 
   async create(dto: CreateOrderDto, clientId: number) {
@@ -340,5 +343,90 @@ export class OrdersService {
     await this.routingService.invalidateCourierRoute(courierId);
 
     return updated;
+  }
+
+  async getOrderEta(orderId: number, clientId: number) {
+    const [order] = await this.db
+      .select()
+      .from(schema.orders)
+      .where(eq(schema.orders.id, orderId));
+
+    if (!order || order.clientId !== clientId) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const eligibleStatuses: OrderStatus[] = [
+      OrderStatus.READY_FOR_DELIVERY,
+      OrderStatus.PICKED_UP,
+    ];
+    if (
+      !eligibleStatuses.includes(order.status as OrderStatus) ||
+      order.courierId === null
+    ) {
+      return { available: false as const, reason: 'order-not-in-transit' };
+    }
+
+    const courierLoc = await this.getCourierLocationForEta(order.courierId);
+    if (!courierLoc) {
+      return { available: false as const, reason: 'courier-offline' };
+    }
+
+    let routes;
+    try {
+      routes = await this.routingService.getOptimizedRoute(order.courierId);
+    } catch {
+      return { available: false as const, reason: 'no-route' };
+    }
+
+    const stats = await this.courierStatsService.getAverageSpeed(
+      order.courierId,
+    );
+
+    let cumulativeKm = 0;
+    let lastPos: { lat: number; lng: number } = courierLoc;
+    let lastActiveWp: { lat: number; lng: number } | null = null;
+    let stopsAhead = 0;
+
+    for (const route of routes) {
+      let firstActiveInRoute = true;
+      for (const wp of route.waypoints) {
+        if (wp.completed) continue;
+        let segKm: number;
+        if (firstActiveInRoute) {
+          const from = lastActiveWp ?? lastPos;
+          segKm = haversineKm(
+            { id: 0, ...from },
+            { id: 0, lat: wp.lat, lng: wp.lng },
+          );
+        } else {
+          segKm = wp.distanceFromPrevKm;
+        }
+        cumulativeKm += segKm;
+        firstActiveInRoute = false;
+        lastActiveWp = { lat: wp.lat, lng: wp.lng };
+
+        if (wp.type === 'DELIVERY' && wp.orderId === orderId) {
+          const minutes = (cumulativeKm / stats.avgSpeedKmh) * 60;
+          return {
+            available: true as const,
+            distanceKm: Math.round(cumulativeKm * 100) / 100,
+            minutes: Math.round(minutes),
+            arrivalAt: new Date(Date.now() + minutes * 60_000).toISOString(),
+            stopsAhead,
+            avgSpeedKmh: stats.avgSpeedKmh,
+            isFallbackSpeed: stats.isFallback,
+          };
+        }
+        if (wp.type === 'DELIVERY') stopsAhead += 1;
+      }
+    }
+
+    return { available: false as const, reason: 'order-not-in-route' };
+  }
+
+  private async getCourierLocationForEta(
+    courierId: number,
+  ): Promise<{ lat: number; lng: number } | null> {
+    return this.routingService.getCourierLocationSnapshot(courierId);
   }
 }

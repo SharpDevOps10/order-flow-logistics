@@ -14,6 +14,8 @@ import { RedisService } from '../redis/redis.service';
 import { Role } from '../../common/enums/role.enum';
 
 const LOCATION_TTL_SECONDS = 300;
+const LOCATION_HISTORY_TTL_SECONDS = 24 * 60 * 60;
+const LOCATION_HISTORY_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 interface LocationPayload {
   lat: number;
@@ -121,6 +123,20 @@ export class CourierGateway
       JSON.stringify({ lat: data.lat, lng: data.lng }),
       LOCATION_TTL_SECONDS,
     );
+
+    const now = Date.now();
+    const historyKey = `courier:location:history:${courierId}`;
+    await this.redisService.zadd(
+      historyKey,
+      now,
+      JSON.stringify({ lat: data.lat, lng: data.lng, t: now }),
+    );
+    await this.redisService.zremRangeByScore(
+      historyKey,
+      0,
+      now - LOCATION_HISTORY_MAX_AGE_MS,
+    );
+    await this.redisService.expire(historyKey, LOCATION_HISTORY_TTL_SECONDS);
 
     this.logger.debug(
       `Location updated: courier #${courierId} → (${data.lat}, ${data.lng})`,

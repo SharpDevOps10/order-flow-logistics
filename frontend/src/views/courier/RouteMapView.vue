@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, toRef, watch } from 'vue'
 import { useRoutingStore } from '@/stores/routing.store'
 import { useSimulationStore } from '@/stores/simulation.store'
 import { useToast } from '@/composables/useToast'
+import { useEta } from '@/composables/useEta'
 import type { RouteWaypoint } from '@/types/routing.types'
 import AppButton from '@/components/common/AppButton.vue'
 import AppSpinner from '@/components/common/AppSpinner.vue'
@@ -14,6 +15,21 @@ const sim = useSimulationStore()
 const toast = useToast()
 
 const showSimulation = import.meta.env.DEV
+
+const courierPos = computed(() => (sim.enabled ? sim.currentPos : null))
+const { stats, speedKmh, etaByWaypoint, fetchStats } = useEta(
+  toRef(store, 'routes'),
+  courierPos,
+)
+
+const formatArrival = (wp: RouteWaypoint): string => {
+  const eta = etaByWaypoint.value.get(wp)
+  if (!eta) return ''
+  const mins = Math.max(0, Math.round(eta.minutes))
+  const hh = eta.arrivalAt.getHours().toString().padStart(2, '0')
+  const mm = eta.arrivalAt.getMinutes().toString().padStart(2, '0')
+  return `~${mins} min · ${hh}:${mm}`
+}
 
 const handleStart = () => {
   if (!sim.hasRoute) sim.loadRoute(store.routes)
@@ -79,7 +95,7 @@ const waypointLabel = (
 }
 
 onMounted(async () => {
-  await store.fetchRoute()
+  await Promise.all([store.fetchRoute(), fetchStats()])
   if (store.error && !isNoOrdersError.value) toast.error(store.error)
   if (store.routes.length) sim.loadRoute(store.routes)
 })
@@ -159,6 +175,20 @@ onBeforeUnmount(() => {
         <div>
           <p class="text-xs text-gray-400">Routes</p>
           <p class="text-2xl font-bold text-gray-900">{{ store.routes.length }}</p>
+        </div>
+        <div class="w-px h-10 bg-gray-100" />
+        <div>
+          <p class="text-xs text-gray-400 flex items-center gap-1.5">
+            Avg speed
+            <span
+              v-if="stats?.isFallback"
+              class="text-[10px] bg-gray-50 border border-gray-100 text-gray-400 px-1.5 py-0.5 rounded"
+              title="Not enough location samples yet — using default"
+            >
+              default
+            </span>
+          </p>
+          <p class="text-2xl font-bold text-gray-900">{{ speedKmh }} <span class="text-sm font-medium text-gray-400">km/h</span></p>
         </div>
       </div>
 
@@ -279,6 +309,16 @@ onBeforeUnmount(() => {
                 <p class="text-sm font-medium text-gray-800">{{ wp.address }}</p>
                 <p class="text-xs text-gray-400 font-mono mt-0.5">
                   {{ wp.lat.toFixed(5) }}, {{ wp.lng.toFixed(5) }}
+                </p>
+                <p
+                  v-if="!wp.completed && etaByWaypoint.get(wp)"
+                  class="text-xs text-gray-500 mt-1 flex items-center gap-1"
+                >
+                  <svg class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="9" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2" />
+                  </svg>
+                  ETA: {{ formatArrival(wp) }}
                 </p>
               </div>
 

@@ -76,6 +76,12 @@ export class RoutingService {
     }
   }
 
+  async getCourierLocationSnapshot(
+    courierId: number,
+  ): Promise<{ lat: number; lng: number } | null> {
+    return this.getCourierLocation(courierId);
+  }
+
   async invalidateCourierRoute(courierId: number): Promise<void> {
     try {
       await this.redisService.del(routeCacheKey(courierId));
