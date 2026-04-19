@@ -10,7 +10,7 @@ export class BatchAssignmentScheduler {
     private readonly batchAssignmentService: BatchAssignmentService,
   ) {}
 
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  // @Cron(CronExpression.EVERY_5_MINUTES)
   async onTick(): Promise<void> {
     try {
       await this.batchAssignmentService.rebalance();

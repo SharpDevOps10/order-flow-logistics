@@ -12,8 +12,7 @@ import { CourierGateway } from '../courier-gateway/courier.gateway';
 import { hungarian } from './hungarian';
 
 const COURIER_CAPACITY = 3;
-const SLOT_PENALTY_KM = 2.0;
-const WORKLOAD_PENALTY_KM = 3.0;
+const LOAD_PENALTY_KM = 3.0;
 const REASSIGN_THRESHOLD = 0.15;
 const DUMMY_COST = 1e6;
 
@@ -291,12 +290,10 @@ export class BatchAssignmentService {
         )
       : DUMMY_COST / 4;
 
-    return (
-      approachKm +
-      order.orderIntrinsicKm +
-      slotIdx * SLOT_PENALTY_KM +
-      courier.activeOrders * WORKLOAD_PENALTY_KM
-    );
+    const effectiveLoad = courier.activeOrders + slotIdx + 1;
+    const loadPenalty = effectiveLoad * effectiveLoad * LOAD_PENALTY_KM;
+
+    return approachKm + order.orderIntrinsicKm + loadPenalty;
   }
 
   private currentAssignmentCost(

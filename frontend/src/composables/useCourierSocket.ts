@@ -1,9 +1,10 @@
-import { onBeforeUnmount, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, watch } from 'vue'
 import { io, type Socket } from 'socket.io-client'
 import { useAuthStore } from '@/stores/auth.store'
 import { useToast } from '@/composables/useToast'
 import { useRoutingStore } from '@/stores/routing.store'
 import { useOrdersStore } from '@/stores/orders.store'
+import { useSimulationStore } from '@/stores/simulation.store'
 
 interface ServerToClientEvents {
   'order:assigned': (payload: { orderId: number }) => void
@@ -24,6 +25,7 @@ export const useCourierSocket = () => {
   const toast = useToast()
   const routingStore = useRoutingStore()
   const ordersStore = useOrdersStore()
+  const simulationStore = useSimulationStore()
 
   let socket: Socket<ServerToClientEvents, ClientToServerEvents> | null = null
   let geoWatchId: number | null = null
@@ -75,11 +77,21 @@ export const useCourierSocket = () => {
     )
 
     locationTimer = setInterval(() => {
+      if (simulationStore.enabled) return
       if (lastPos && socket?.connected) {
         socket.emit('courier:location', lastPos)
       }
     }, LOCATION_INTERVAL_MS)
   }
+
+  const stopSimWatch = watch(
+    () => simulationStore.currentPos,
+    (pos) => {
+      if (simulationStore.enabled && pos && socket?.connected) {
+        socket.emit('courier:location', pos)
+      }
+    },
+  )
 
   const disconnect = () => {
     if (locationTimer) {
@@ -94,6 +106,7 @@ export const useCourierSocket = () => {
       socket.disconnect()
       socket = null
     }
+    stopSimWatch()
   }
 
   onMounted(() => {

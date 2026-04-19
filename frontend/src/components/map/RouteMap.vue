@@ -5,30 +5,63 @@ import type { OptimizedRoute } from '@/types/routing.types'
 
 const props = defineProps<{
   routes: OptimizedRoute[]
+  courierPos?: { lat: number; lng: number } | null
 }>()
 
 let map: L.Map | null = null
 let layerGroup: L.LayerGroup | null = null
+let courierMarker: L.Marker | null = null
 
-const SEGMENT_COLORS = [
-  '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444',
-  '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16',
+function buildCourierIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="position:relative;width:22px;height:22px">
+      <span style="
+        position:absolute;inset:0;border-radius:50%;
+        background:#2563eb;opacity:0.25;
+        animation:courier-pulse 1.6s ease-out infinite;
+      "></span>
+      <span style="
+        position:absolute;inset:4px;border-radius:50%;
+        background:#2563eb;border:2px solid #fff;
+        box-shadow:0 2px 6px rgba(0,0,0,0.35);
+      "></span>
+    </div>
+    <style>@keyframes courier-pulse{0%{transform:scale(0.8);opacity:0.5}100%{transform:scale(1.8);opacity:0}}</style>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  })
+}
+
+const ROUTE_COLORS = [
+  '#2563eb',
+  '#059669',
+  '#dc2626',
+  '#9333ea',
+  '#ea580c',
+  '#0891b2',
+  '#db2777',
+  '#65a30d',
 ]
 
-const segmentColor = (i: number) => SEGMENT_COLORS[i % SEGMENT_COLORS.length]
+const routeColor = (i: number) => ROUTE_COLORS[i % ROUTE_COLORS.length]
 
-function buildPickupIcon() {
+function buildPickupIcon(completed = false, themeColor = '#f97316') {
+  const bg = completed ? '#9ca3af' : themeColor
+  const opacity = completed ? '0.6' : '1'
   return L.divIcon({
     className: '',
     html: `<div style="
       width:32px;height:32px;border-radius:50%;
-      background:#f97316;border:2px solid #fff;
+      background:${bg};border:2px solid #fff;
       box-shadow:0 2px 6px rgba(0,0,0,0.25);
       display:flex;align-items:center;justify-content:center;
+      opacity:${opacity};
     ">
       <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-        <polyline stroke-linecap="round" stroke-linejoin="round" points="9 22 9 12 15 12 15 22"/>
+        ${completed
+          ? '<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>'
+          : '<path stroke-linecap="round" stroke-linejoin="round" d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline stroke-linecap="round" stroke-linejoin="round" points="9 22 9 12 15 12 15 22"/>'}
       </svg>
     </div>`,
     iconSize: [32, 32],
@@ -57,44 +90,52 @@ function renderRoutes() {
 
   const allLatLngs: L.LatLng[] = []
 
-  props.routes.forEach((route) => {
-    const latlngs: L.LatLng[] = []
+  let globalStopOffset = 0
 
-    route.waypoints.forEach((wp, wpIndex) => {
+  props.routes.forEach((route, routeIndex) => {
+    const latlngs: L.LatLng[] = []
+    const deliveries = route.waypoints.filter((wp) => wp.type === 'DELIVERY')
+    const themeColor = routeColor(routeIndex)
+
+    route.waypoints.forEach((wp) => {
       const ll = L.latLng(wp.lat, wp.lng)
-      latlngs.push(ll)
       allLatLngs.push(ll)
 
-      const arrivingColor = wpIndex > 0 ? segmentColor(wpIndex - 1) : '#f97316'
+      const localStop = wp.type === 'DELIVERY' ? deliveries.indexOf(wp) + 1 : 0
+      const globalStop = localStop > 0 ? globalStopOffset + localStop : 0
+      const arrivingColor = wp.completed ? '#9ca3af' : themeColor
 
       const popupContent = `
         <div style="font-family:sans-serif;min-width:160px">
           <p style="font-size:11px;font-weight:600;color:${arrivingColor};margin:0 0 4px">
-            ${wp.type === 'PICKUP' ? 'Pickup' : `Stop ${wpIndex}`}
+            ${wp.type === 'PICKUP' ? (wp.completed ? 'Pickup · done' : 'Pickup') : `Stop ${globalStop}`}
+            · Route ${routeIndex + 1}
             ${wp.orderId ? `· Order #${wp.orderId}` : ''}
           </p>
           <p style="font-size:12px;font-weight:500;color:#111;margin:0 0 2px">${wp.address}</p>
           <p style="font-size:11px;color:#888;margin:0;font-family:monospace">${wp.lat.toFixed(5)}, ${wp.lng.toFixed(5)}</p>
-          ${wpIndex > 0 ? `<p style="font-size:11px;color:#6b7280;margin:4px 0 0">↑ ${wp.distanceFromPrevKm} km from prev</p>` : ''}
+          ${!wp.completed && wp.type === 'DELIVERY' && localStop > 1 ? `<p style="font-size:11px;color:#6b7280;margin:4px 0 0">↑ ${wp.distanceFromPrevKm} km from prev</p>` : ''}
         </div>
       `
 
       let marker: L.Marker
       if (wp.type === 'PICKUP') {
-        marker = L.marker(ll, { icon: buildPickupIcon() })
+        marker = L.marker(ll, { icon: buildPickupIcon(wp.completed, themeColor) })
       } else {
-        marker = L.marker(ll, { icon: buildStopIcon(wpIndex, arrivingColor) })
+        marker = L.marker(ll, { icon: buildStopIcon(globalStop, arrivingColor) })
       }
       marker.bindPopup(popupContent)
       layerGroup!.addLayer(marker)
+
+      if (!wp.completed) latlngs.push(ll)
     })
 
     if (route.geometry && route.geometry.length > 0) {
-      route.geometry.forEach((segment, i) => {
+      route.geometry.forEach((segment) => {
         if (segment.length < 2) return
         const coords = segment.map(([lat, lng]) => L.latLng(lat, lng))
         L.polyline(coords, {
-          color: segmentColor(i),
+          color: themeColor,
           weight: 4,
           opacity: 0.85,
         }).addTo(layerGroup!)
@@ -102,12 +143,14 @@ function renderRoutes() {
     } else {
       for (let i = 0; i < latlngs.length - 1; i++) {
         L.polyline([latlngs[i], latlngs[i + 1]], {
-          color: segmentColor(i),
+          color: themeColor,
           weight: 4,
           opacity: 0.85,
         }).addTo(layerGroup!)
       }
     }
+
+    globalStopOffset += deliveries.length
   })
 
   if (allLatLngs.length > 0) {
@@ -134,6 +177,27 @@ onUnmounted(() => {
 })
 
 watch(() => props.routes, renderRoutes, { deep: true })
+
+watch(
+  () => props.courierPos,
+  (pos) => {
+    if (!map) return
+    if (!pos) {
+      if (courierMarker) {
+        courierMarker.remove()
+        courierMarker = null
+      }
+      return
+    }
+    const ll = L.latLng(pos.lat, pos.lng)
+    if (!courierMarker) {
+      courierMarker = L.marker(ll, { icon: buildCourierIcon(), zIndexOffset: 1000 }).addTo(map)
+    } else {
+      courierMarker.setLatLng(ll)
+    }
+  },
+  { deep: true, immediate: true },
+)
 </script>
 
 <template>

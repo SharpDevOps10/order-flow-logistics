@@ -35,6 +35,7 @@ export interface RoutePoint {
   lat: number;
   lng: number;
   distanceFromPrevKm: number;
+  completed?: boolean;
 }
 
 export interface OptimizedRoute {
@@ -47,6 +48,8 @@ function orgNodeId(orgId: number): number {
   return -orgId;
 }
 
+const COURIER_START_NODE_ID = -999_999;
+
 @Injectable()
 export class RoutingService {
   private readonly logger = new Logger(RoutingService.name);
@@ -56,6 +59,22 @@ export class RoutingService {
     private readonly osmService: OsmService,
     private readonly redisService: RedisService,
   ) {}
+
+  private async getCourierLocation(
+    courierId: number,
+  ): Promise<{ lat: number; lng: number } | null> {
+    try {
+      const raw = await this.redisService.get(`courier:location:${courierId}`);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as { lat: number; lng: number };
+      if (typeof parsed.lat !== 'number' || typeof parsed.lng !== 'number') {
+        return null;
+      }
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
 
   async invalidateCourierRoute(courierId: number): Promise<void> {
     try {
@@ -91,13 +110,16 @@ export class RoutingService {
       .where(
         and(
           eq(schema.orders.courierId, courierId),
-          eq(schema.orders.status, OrderStatus.READY_FOR_DELIVERY),
+          inArray(schema.orders.status, [
+            OrderStatus.READY_FOR_DELIVERY,
+            OrderStatus.PICKED_UP,
+          ]),
         ),
       );
 
     if (orders.length === 0) {
       throw new NotFoundException(
-        'No READY_FOR_DELIVERY orders assigned to this courier',
+        'No active deliveries assigned to this courier',
       );
     }
 
@@ -128,6 +150,8 @@ export class RoutingService {
 
     const orgMap = new Map(orgs.map((o) => [o.id, o]));
 
+    const courierLoc = await this.getCourierLocation(courierId);
+
     const allPoints = [
       ...orders.map((o) => ({
         lat: parseFloat(o.lat!),
@@ -137,6 +161,7 @@ export class RoutingService {
         lat: parseFloat(o.lat!),
         lng: parseFloat(o.lng!),
       })),
+      ...(courierLoc ? [courierLoc] : []),
     ];
 
     const bbox = this.osmService.computeBoundingBox(allPoints);
@@ -159,6 +184,10 @@ export class RoutingService {
       const org = orgMap.get(orgId)!;
       const groupOrders = orders.filter((o) => o.organizationId === orgId);
 
+      const hasPendingPickup = groupOrders.some(
+        (o) => o.status === OrderStatus.READY_FOR_DELIVERY,
+      );
+
       const pickupNode: GraphNode = {
         id: orgNodeId(orgId),
         lat: parseFloat(org.lat!),
@@ -171,7 +200,20 @@ export class RoutingService {
         lng: parseFloat(o.lng!),
       }));
 
-      const waypointNodes: GraphNode[] = [pickupNode, ...deliveryNodes];
+      const startFromCourier = !hasPendingPickup && courierLoc !== null;
+      const startNode: GraphNode | null = startFromCourier
+        ? {
+            id: COURIER_START_NODE_ID,
+            lat: courierLoc!.lat,
+            lng: courierLoc!.lng,
+          }
+        : null;
+
+      const waypointNodes: GraphNode[] = [
+        ...(startNode ? [startNode] : []),
+        ...(hasPendingPickup ? [pickupNode] : []),
+        ...deliveryNodes,
+      ];
       const orderDetailsMap = new Map(groupOrders.map((o) => [o.id, o]));
 
       let matrix: DistanceMatrix;
@@ -226,11 +268,28 @@ export class RoutingService {
       const waypoints: RoutePoint[] = [];
       let totalDistanceKm = 0;
 
+      if (!hasPendingPickup) {
+        waypoints.push({
+          type: 'PICKUP',
+          orderId: null,
+          organizationId: orgId,
+          address: org.name + (org.region ? `, ${org.region}` : ''),
+          lat: pickupNode.lat,
+          lng: pickupNode.lng,
+          distanceFromPrevKm: 0,
+          completed: true,
+        });
+      }
+
       for (let i = 0; i < orderedLogicalIds.length; i++) {
         const nodeId = orderedLogicalIds[i];
         const node = nodeMap.get(nodeId)!;
         const distFromPrev = segmentDistancesKm[i];
         totalDistanceKm += distFromPrev;
+
+        if (nodeId === COURIER_START_NODE_ID) {
+          continue;
+        }
 
         if (nodeId === pickupNode.id) {
           waypoints.push({

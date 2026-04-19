@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useOrdersStore } from '@/stores/orders.store'
+import { useRoutingStore } from '@/stores/routing.store'
 import { useToast } from '@/composables/useToast'
 import { OrderStatus } from '@/types/order.types'
 import { OrdersApi } from '@/api/orders.api'
@@ -10,6 +11,7 @@ import AppBadge from '@/components/common/AppBadge.vue'
 import AppSpinner from '@/components/common/AppSpinner.vue'
 
 const store = useOrdersStore()
+const routingStore = useRoutingStore()
 const router = useRouter()
 const toast = useToast()
 
@@ -34,7 +36,7 @@ const handlePickup = async (orderId: number) => {
   try {
     await OrdersApi.pickup(orderId)
     toast.success(`Order #${orderId} marked as picked up`)
-    await store.fetchCourier()
+    await Promise.all([store.fetchCourier(), routingStore.fetchRoute()])
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Failed to mark as picked up'
     toast.error(msg)
@@ -45,7 +47,7 @@ const handleDeliver = async (orderId: number) => {
   try {
     await OrdersApi.deliver(orderId)
     toast.success(`Order #${orderId} delivered`)
-    await store.fetchCourier()
+    await Promise.all([store.fetchCourier(), routingStore.fetchRoute()])
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Failed to mark as delivered'
     toast.error(msg)

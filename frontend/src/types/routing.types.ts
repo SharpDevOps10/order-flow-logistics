@@ -8,6 +8,7 @@ export interface RouteWaypoint {
   lat: number
   lng: number
   distanceFromPrevKm: number
+  completed?: boolean
 }
 
 export interface OptimizedRoute {
