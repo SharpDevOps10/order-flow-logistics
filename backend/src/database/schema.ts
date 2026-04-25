@@ -7,6 +7,7 @@ import {
   timestamp,
   pgEnum,
   decimal,
+  boolean,
 } from 'drizzle-orm/pg-core';
 import { Role } from '../common/enums/role.enum';
 import { OrderStatus } from '../common/enums/order-status.enum';
@@ -34,6 +35,9 @@ export const users = pgTable('users', {
   role: userRoleEnum('role').default(Role.CLIENT).notNull(),
   createdAt: timestamp('created_at').defaultNow(),
   refreshToken: text('refresh_token'),
+  isEmailVerified: boolean('is_email_verified').default(false).notNull(),
+  emailVerificationToken: text('email_verification_token'),
+  emailVerificationExpiresAt: timestamp('email_verification_expires_at'),
 });
 
 export const organizations = pgTable('organizations', {

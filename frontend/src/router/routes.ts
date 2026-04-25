@@ -31,6 +31,30 @@ export const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/check-email',
+    component: () => import('@/layouts/AuthLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'check-email',
+        component: () => import('@/views/auth/CheckEmailView.vue'),
+        meta: { public: true },
+      },
+    ],
+  },
+  {
+    path: '/verify-email',
+    component: () => import('@/layouts/AuthLayout.vue'),
+    children: [
+      {
+        path: '',
+        name: 'verify-email',
+        component: () => import('@/views/auth/VerifyEmailView.vue'),
+        meta: { public: true },
+      },
+    ],
+  },
+  {
     path: '/client',
     component: () => import('@/layouts/ClientLayout.vue'),
     meta: { role: UserRole.Client },

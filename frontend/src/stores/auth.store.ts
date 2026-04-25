@@ -44,9 +44,9 @@ export const useAuthStore = defineStore('auth', () => {
   const signUp = async (dto: SignUpDto) => {
     loading.value = true
     try {
-      const tokens = await AuthApi.signUp(dto)
+      const response = await AuthApi.signUp(dto)
       error.value = null
-      setTokens(tokens)
+      return response
     } catch (e: unknown) {
       error.value = extractErrorMessage(e)
       throw e

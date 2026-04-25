@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirm your email</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f6f9;font-family:'Segoe UI',Arial,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f6f9;padding:40px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#1a73e8 0%,#0d47a1 100%);padding:40px 48px;text-align:center;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <div style="display:inline-block;background:rgba(255,255,255,0.15);border-radius:50%;width:72px;height:72px;line-height:72px;text-align:center;font-size:36px;margin-bottom:16px;">
+                      ✉️
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center">
+                    <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;">
+                      Order Flow Logistics
+                    </h1>
+                    <p style="margin:6px 0 0;color:rgba(255,255,255,0.75);font-size:14px;">
+                      Logistics Management Platform
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Badge -->
+          <tr>
+            <td align="center" style="padding:36px 48px 0;">
+              <div style="display:inline-block;background:#e3f2fd;border:2px solid #1a73e8;border-radius:50px;padding:10px 24px;">
+                <span style="color:#0d47a1;font-size:15px;font-weight:600;">Confirm your email address</span>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px 48px 40px;">
+              <p style="margin:0 0 16px;color:#37474f;font-size:16px;line-height:1.6;">
+                Hello, <strong>{{fullName}}</strong>!
+              </p>
+              <p style="margin:0 0 24px;color:#546e7a;font-size:15px;line-height:1.7;">
+                Thanks for signing up for Order Flow Logistics. To finish creating your
+                account, please confirm that this is your email address by clicking the
+                button below. The link will expire in <strong>{{expiresInHours}} hours</strong>.
+              </p>
+
+              <!-- CTA Button -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                <tr>
+                  <td align="center">
+                    <a href="{{verificationUrl}}"
+                       style="display:inline-block;background:linear-gradient(135deg,#1a73e8,#0d47a1);color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:14px 36px;border-radius:8px;letter-spacing:0.3px;">
+                      Confirm Email
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 8px;color:#90a4ae;font-size:13px;line-height:1.6;">
+                If the button doesn't work, paste this link into your browser:
+              </p>
+              <p style="margin:0;word-break:break-all;color:#1a73e8;font-size:13px;line-height:1.6;">
+                {{verificationUrl}}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td style="padding:0 48px;">
+              <hr style="border:none;border-top:1px solid #eceff1;margin:0;" />
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:28px 48px;text-align:center;">
+              <p style="margin:0 0 8px;color:#90a4ae;font-size:13px;">
+                If you didn't create an account, you can safely ignore this email.
+              </p>
+              <p style="margin:0;color:#b0bec5;font-size:12px;">
+                © {{year}} Order Flow Logistics. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>

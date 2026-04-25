@@ -29,3 +29,12 @@ export interface AuthTokens {
   accessToken: string
   refreshToken: string
 }
+
+export interface SignUpResponse {
+  message: string
+  email: string
+}
+
+export interface VerifyEmailResponse {
+  message: string
+}

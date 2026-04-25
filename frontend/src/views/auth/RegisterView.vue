@@ -9,13 +9,6 @@ import AppInput from '@/components/common/AppInput.vue'
 const router = useRouter()
 const authStore = useAuthStore()
 
-const ROLE_HOME: Record<UserRole, string> = {
-  [UserRole.Client]: '/client/marketplace',
-  [UserRole.Supplier]: '/supplier/organizations',
-  [UserRole.Courier]: '/courier/deliveries',
-  [UserRole.Admin]: '/admin/pending',
-}
-
 type RoleOption = {
   value: UserRole
   label: string
@@ -89,14 +82,15 @@ const handleSubmit = async () => {
   if (!validate()) return
 
   try {
-    await authStore.signUp({
+    const response = await authStore.signUp({
       fullName: form.fullName,
       email: form.email,
       password: form.password,
       role: form.role as UserRole,
     })
-    const role = authStore.role
-    if (role) router.push(ROLE_HOME[role])
+    if (response) {
+      router.push({ name: 'check-email', query: { email: response.email } })
+    }
   } catch {
   }
 }

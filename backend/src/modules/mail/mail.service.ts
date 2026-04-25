@@ -1,13 +1,47 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class MailService {
+  private readonly logger = new Logger(MailService.name);
+
   constructor(
     private readonly mailerService: MailerService,
     private readonly configService: ConfigService,
   ) {}
+
+  async sendEmailVerification(
+    email: string,
+    fullName: string,
+    token: string,
+    expiresInHours: number,
+  ): Promise<void> {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+    const verificationUrl = `${frontendUrl}/verify-email?token=${token}`;
+    try {
+      const info = await this.mailerService.sendMail({
+        to: email,
+        subject: 'Confirm your email — Order Flow Logistics',
+        template: './email-verification',
+        context: {
+          fullName,
+          verificationUrl,
+          expiresInHours,
+          year: new Date().getFullYear(),
+        },
+      });
+      this.logger.log(
+        `Verification email sent to ${email} (messageId=${info?.messageId ?? 'n/a'})`,
+      );
+    } catch (err) {
+      this.logger.error(
+        `Failed to send verification email to ${email}: ${(err as Error).message}`,
+        (err as Error).stack,
+      );
+      throw err;
+    }
+  }
 
   async sendOrganizationApproved(
     email: string,
