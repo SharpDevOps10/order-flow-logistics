@@ -10,6 +10,7 @@ import { CourierGateway } from '../courier-gateway/courier.gateway';
 import { OrderStatus } from '../../common/enums/order-status.enum';
 import { haversineKm } from '../routing/dijkstra';
 import { RoutingService } from '../routing/routing.service';
+import { ReviewsService } from '../reviews/reviews.service';
 
 export interface OrderReadyEvent {
   messageId?: string;
@@ -22,8 +23,9 @@ export interface OrderReadyEvent {
   totalAmount: number;
 }
 
-const DISTANCE_WEIGHT = 0.7;
-const WORKLOAD_WEIGHT = 0.3;
+const DISTANCE_WEIGHT = 0.5;
+const WORKLOAD_WEIGHT = 0.2;
+const RATING_WEIGHT = 0.3;
 
 @Injectable()
 export class CourierAssignmentService {
@@ -36,6 +38,7 @@ export class CourierAssignmentService {
     private readonly mailService: MailService,
     private readonly courierGateway: CourierGateway,
     private readonly routingService: RoutingService,
+    private readonly reviewsService: ReviewsService,
   ) {}
 
   async assignCourierForOrder(event: OrderReadyEvent): Promise<void> {
@@ -85,11 +88,18 @@ export class CourierAssignmentService {
       }
     }
 
+    const ratingMap = await this.reviewsService.getBayesianRatingsForCouriers(
+      couriers.map((c) => c.id),
+    );
+
     const orgNode = { id: 0, lat: event.orgLat, lng: event.orgLng };
 
     const scored = couriers.map((courier) => {
       const activeOrders = workloadMap.get(courier.id) ?? 0;
       const workloadScore = 1 / (1 + activeOrders);
+
+      const bayesianRating = ratingMap.get(courier.id) ?? 0;
+      const ratingScore = bayesianRating / 5;
 
       const location = locationMap.get(courier.id);
       if (location) {
@@ -100,15 +110,18 @@ export class CourierAssignmentService {
         });
         const distScore = 1 / (1 + distKm);
         const score =
-          DISTANCE_WEIGHT * distScore + WORKLOAD_WEIGHT * workloadScore;
-        return { courier, score, distKm, activeOrders };
+          DISTANCE_WEIGHT * distScore +
+          WORKLOAD_WEIGHT * workloadScore +
+          RATING_WEIGHT * ratingScore;
+        return { courier, score, distKm, activeOrders, bayesianRating };
       }
 
       return {
         courier,
-        score: WORKLOAD_WEIGHT * workloadScore,
+        score: WORKLOAD_WEIGHT * workloadScore + RATING_WEIGHT * ratingScore,
         distKm: null as number | null,
         activeOrders,
+        bayesianRating,
       };
     });
 
@@ -119,7 +132,8 @@ export class CourierAssignmentService {
       `Selected courier #${best.courier.id} "${best.courier.fullName}" | ` +
         `score=${best.score.toFixed(3)}, ` +
         `dist=${best.distKm !== null ? best.distKm.toFixed(1) + ' km' : 'N/A (offline)'}, ` +
-        `activeOrders=${best.activeOrders}`,
+        `activeOrders=${best.activeOrders}, ` +
+        `rating=${best.bayesianRating.toFixed(2)}/5`,
     );
 
     await this.db

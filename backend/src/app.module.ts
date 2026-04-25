@@ -14,6 +14,7 @@ import { RedisModule } from './modules/redis/redis.module';
 import { CourierGatewayModule } from './modules/courier-gateway/courier-gateway.module';
 import { CourierAssignmentModule } from './modules/courier-assignment/courier-assignment.module';
 import { MessagingModule } from './modules/messaging/messaging.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { MessagingModule } from './modules/messaging/messaging.module';
     UsersModule,
     CourierGatewayModule,
     CourierAssignmentModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

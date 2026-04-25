@@ -1,17 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useOrdersStore } from '@/stores/orders.store'
 import { useOrganizationsStore } from '@/stores/organizations.store'
 import { useToast } from '@/composables/useToast'
 import { OrderStatus } from '@/types/order.types'
 import type { Order } from '@/types/order.types'
+import type { OrderReview, CourierRatingStats } from '@/types/review.types'
 import { OrdersApi, type OrderEtaResponse } from '@/api/orders.api'
+import { ReviewsApi } from '@/api/reviews.api'
 import AppBadge from '@/components/common/AppBadge.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppSpinner from '@/components/common/AppSpinner.vue'
 import AppModal from '@/components/common/AppModal.vue'
 import OrderRouteMap from '@/components/map/OrderRouteMap.vue'
+import StarRating from '@/components/common/StarRating.vue'
 
 const store = useOrdersStore()
 const orgsStore = useOrganizationsStore()
@@ -38,18 +41,22 @@ const canShowRoute = (order: Order): boolean => {
   return !!(org?.lat && org?.lng)
 }
 
-type BadgeVariant = 'yellow' | 'blue' | 'green'
+type BadgeVariant = 'yellow' | 'blue' | 'green' | 'default' | 'purple'
 
 const statusBadgeVariant: Record<OrderStatus, BadgeVariant> = {
   [OrderStatus.Pending]: 'yellow',
   [OrderStatus.Accepted]: 'blue',
   [OrderStatus.ReadyForDelivery]: 'green',
+  [OrderStatus.PickedUp]: 'purple',
+  [OrderStatus.Delivered]: 'default',
 }
 
 const statusLabel: Record<OrderStatus, string> = {
   [OrderStatus.Pending]: 'Pending',
   [OrderStatus.Accepted]: 'Accepted',
   [OrderStatus.ReadyForDelivery]: 'Ready for Delivery',
+  [OrderStatus.PickedUp]: 'Picked Up',
+  [OrderStatus.Delivered]: 'Delivered',
 }
 
 const formatDate = (dateStr: string | null): string => {
@@ -126,10 +133,100 @@ const etaUnavailableLabel = (reason: string): string => {
   return 'ETA unavailable'
 }
 
+const reviews = ref<Map<number, OrderReview>>(new Map())
+const courierStats = ref<Map<number, CourierRatingStats>>(new Map())
+
+const fetchReviewsAndStats = async () => {
+  const delivered = store.orders.filter(
+    (o) => o.status === OrderStatus.Delivered,
+  )
+  const reviewResults = await Promise.all(
+    delivered.map(async (o) => {
+      try {
+        const r = await ReviewsApi.findByOrder(o.id)
+        return r ? ([o.id, r] as const) : null
+      } catch {
+        return null
+      }
+    }),
+  )
+  const nextReviews = new Map<number, OrderReview>()
+  for (const entry of reviewResults) if (entry) nextReviews.set(entry[0], entry[1])
+  reviews.value = nextReviews
+
+  const courierIds = Array.from(
+    new Set(
+      store.orders
+        .filter((o) => o.courierId !== null)
+        .map((o) => o.courierId as number),
+    ),
+  )
+  const statsResults = await Promise.all(
+    courierIds.map(async (cid) => {
+      try {
+        return [cid, await ReviewsApi.getCourierStats(cid)] as const
+      } catch {
+        return null
+      }
+    }),
+  )
+  const nextStats = new Map<number, CourierRatingStats>()
+  for (const entry of statsResults) if (entry) nextStats.set(entry[0], entry[1])
+  courierStats.value = nextStats
+}
+
+const isReviewModalOpen = ref(false)
+const reviewOrder = ref<Order | null>(null)
+const isSubmittingReview = ref(false)
+const reviewForm = reactive({
+  courierRating: 0,
+  speedRating: 0,
+  comment: '',
+})
+
+const openReviewModal = (order: Order) => {
+  reviewOrder.value = order
+  reviewForm.courierRating = 0
+  reviewForm.speedRating = 0
+  reviewForm.comment = ''
+  isReviewModalOpen.value = true
+}
+
+const handleSubmitReview = async () => {
+  if (!reviewOrder.value) return
+  if (!reviewForm.courierRating || !reviewForm.speedRating) {
+    toast.error('Please rate both courier and speed')
+    return
+  }
+  isSubmittingReview.value = true
+  try {
+    const review = await ReviewsApi.create({
+      orderId: reviewOrder.value.id,
+      courierRating: reviewForm.courierRating,
+      speedRating: reviewForm.speedRating,
+      comment: reviewForm.comment.trim() || undefined,
+    })
+    reviews.value.set(review.orderId, review)
+    if (reviewOrder.value.courierId) {
+      const stats = await ReviewsApi.getCourierStats(reviewOrder.value.courierId)
+      courierStats.value.set(reviewOrder.value.courierId, stats)
+    }
+    toast.success('Thanks for your feedback!')
+    isReviewModalOpen.value = false
+  } catch (e) {
+    const msg =
+      (e as { response?: { data?: { message?: string } } }).response?.data
+        ?.message ?? 'Failed to submit review'
+    toast.error(msg)
+  } finally {
+    isSubmittingReview.value = false
+  }
+}
+
 onMounted(async () => {
   await Promise.all([store.fetchMy(), orgsStore.fetchAll()])
   if (store.error) toast.error(store.error)
-  await refreshEtas()
+  await Promise.all([refreshEtas(), fetchReviewsAndStats()])
   etaTimer = setInterval(refreshEtas, 60_000)
 })
 
@@ -212,6 +309,19 @@ onBeforeUnmount(() => {
             <p class="text-gray-700 font-medium">
               {{ order.courierId ? `Assigned (ID: ${order.courierId})` : 'Not assigned yet' }}
             </p>
+            <p
+              v-if="order.courierId && courierStats.get(order.courierId)"
+              class="text-xs text-gray-500 mt-1 flex items-center gap-1"
+            >
+              <span class="text-yellow-400">★</span>
+              <span class="font-semibold text-gray-700">
+                {{ courierStats.get(order.courierId)!.bayesianCourier.toFixed(2) }}
+              </span>
+              <span class="text-gray-400">
+                ({{ courierStats.get(order.courierId)!.count }}
+                {{ courierStats.get(order.courierId)!.count === 1 ? 'review' : 'reviews' }})
+              </span>
+            </p>
           </div>
         </div>
 
@@ -275,6 +385,44 @@ onBeforeUnmount(() => {
           </AppButton>
         </div>
 
+                <div
+          v-if="order.status === OrderStatus.Delivered"
+          class="pt-1 border-t border-gray-50"
+        >
+          <div
+            v-if="reviews.get(order.id)"
+            class="flex flex-col gap-2 bg-yellow-50 border border-yellow-100 rounded-xl px-4 py-3"
+          >
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-gray-500 font-medium">Your review</span>
+              <span class="text-xs text-gray-400">
+                {{ formatDate(reviews.get(order.id)!.createdAt) }}
+              </span>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <p class="text-xs text-gray-500 mb-0.5">Courier</p>
+                <StarRating :model-value="reviews.get(order.id)!.courierRating" readonly size="sm" />
+              </div>
+              <div>
+                <p class="text-xs text-gray-500 mb-0.5">Speed</p>
+                <StarRating :model-value="reviews.get(order.id)!.speedRating" readonly size="sm" />
+              </div>
+            </div>
+            <p
+              v-if="reviews.get(order.id)!.comment"
+              class="text-sm text-gray-600 italic mt-1"
+            >
+              "{{ reviews.get(order.id)!.comment }}"
+            </p>
+          </div>
+          <div v-else class="flex justify-end">
+            <AppButton size="sm" @click="openReviewModal(order)">
+              ★ Rate delivery
+            </AppButton>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -295,6 +443,46 @@ onBeforeUnmount(() => {
         <AppButton variant="secondary" @click="isCancelModalOpen = false">Keep order</AppButton>
         <AppButton variant="danger" :loading="isCancelling" @click="handleCancel">
           Yes, cancel
+        </AppButton>
+      </template>
+    </AppModal>
+
+    <AppModal v-model="isReviewModalOpen" title="Rate your delivery">
+      <div class="flex flex-col gap-5">
+        <p class="text-sm text-gray-600">
+          How did
+          <span class="font-semibold text-gray-900">Order #{{ reviewOrder?.id }}</span>
+          go? Your feedback helps us route to the best couriers.
+        </p>
+
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-medium text-gray-700">Courier</label>
+          <p class="text-xs text-gray-400 -mt-1">Politeness, care, communication</p>
+          <StarRating v-model="reviewForm.courierRating" size="lg" />
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-medium text-gray-700">Speed</label>
+          <p class="text-xs text-gray-400 -mt-1">How fast the order arrived</p>
+          <StarRating v-model="reviewForm.speedRating" size="lg" />
+        </div>
+
+        <div class="flex flex-col gap-2">
+          <label class="text-sm font-medium text-gray-700">Comment <span class="text-gray-400 font-normal">(optional)</span></label>
+          <textarea
+            v-model="reviewForm.comment"
+            rows="3"
+            maxlength="1000"
+            class="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
+            placeholder="Anything you'd like to share?"
+          />
+        </div>
+      </div>
+
+      <template #footer>
+        <AppButton variant="secondary" @click="isReviewModalOpen = false">Cancel</AppButton>
+        <AppButton :loading="isSubmittingReview" @click="handleSubmitReview">
+          Submit review
         </AppButton>
       </template>
     </AppModal>

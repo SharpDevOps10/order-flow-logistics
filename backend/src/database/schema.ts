@@ -82,6 +82,24 @@ export const products = pgTable('products', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+export const orderReviews = pgTable('order_reviews', {
+  id: serial('id').primaryKey(),
+  orderId: integer('order_id')
+    .references(() => orders.id)
+    .notNull()
+    .unique(),
+  clientId: integer('client_id')
+    .references(() => users.id)
+    .notNull(),
+  courierId: integer('courier_id')
+    .references(() => users.id)
+    .notNull(),
+  courierRating: integer('courier_rating').notNull(),
+  speedRating: integer('speed_rating').notNull(),
+  comment: text('comment'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const orderItems = pgTable('order_items', {
   id: serial('id').primaryKey(),
   orderId: integer('order_id')

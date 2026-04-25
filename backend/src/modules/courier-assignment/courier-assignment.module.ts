@@ -7,9 +7,10 @@ import { BatchAssignmentController } from './batch-assignment.controller';
 import { MailModule } from '../mail/mail.module';
 import { CourierGatewayModule } from '../courier-gateway/courier-gateway.module';
 import { RoutingModule } from '../routing/routing.module';
+import { ReviewsModule } from '../reviews/reviews.module';
 
 @Module({
-  imports: [MailModule, CourierGatewayModule, RoutingModule],
+  imports: [MailModule, CourierGatewayModule, RoutingModule, ReviewsModule],
   controllers: [OrderEventsConsumer, BatchAssignmentController],
   providers: [
     CourierAssignmentService,
