@@ -11,6 +11,7 @@ import { OrderStatus } from '../../common/enums/order-status.enum';
 import { haversineKm } from '../routing/dijkstra';
 import { RoutingService } from '../routing/routing.service';
 import { ReviewsService } from '../reviews/reviews.service';
+import { ShiftsService } from '../shifts/shifts.service';
 
 export interface OrderReadyEvent {
   messageId?: string;
@@ -39,6 +40,7 @@ export class CourierAssignmentService {
     private readonly courierGateway: CourierGateway,
     private readonly routingService: RoutingService,
     private readonly reviewsService: ReviewsService,
+    private readonly shiftsService: ShiftsService,
   ) {}
 
   async assignCourierForOrder(event: OrderReadyEvent): Promise<void> {
@@ -60,8 +62,23 @@ export class CourierAssignmentService {
       return;
     }
 
+    const onShiftIds = new Set(
+      await this.shiftsService.filterOnShiftCouriers(
+        couriers.map((c) => c.id),
+        new Date(),
+      ),
+    );
+    const availableCouriers = couriers.filter((c) => onShiftIds.has(c.id));
+
+    if (availableCouriers.length === 0) {
+      this.logger.warn(
+        `All couriers are off-shift — order #${event.orderId} left unassigned`,
+      );
+      return;
+    }
+
     const workloadMap = new Map<number, number>();
-    for (const courier of couriers) {
+    for (const courier of availableCouriers) {
       const [row] = await this.db
         .select({ total: count() })
         .from(schema.orders)
@@ -78,7 +95,7 @@ export class CourierAssignmentService {
     }
 
     const locationMap = new Map<number, { lat: number; lng: number }>();
-    for (const courier of couriers) {
+    for (const courier of availableCouriers) {
       const raw = await this.redisService.get(`courier:location:${courier.id}`);
       if (raw) {
         locationMap.set(
@@ -89,12 +106,12 @@ export class CourierAssignmentService {
     }
 
     const ratingMap = await this.reviewsService.getBayesianRatingsForCouriers(
-      couriers.map((c) => c.id),
+      availableCouriers.map((c) => c.id),
     );
 
     const orgNode = { id: 0, lat: event.orgLat, lng: event.orgLng };
 
-    const scored = couriers.map((courier) => {
+    const scored = availableCouriers.map((courier) => {
       const activeOrders = workloadMap.get(courier.id) ?? 0;
       const workloadScore = 1 / (1 + activeOrders);
 

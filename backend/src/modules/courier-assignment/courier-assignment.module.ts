@@ -8,9 +8,16 @@ import { MailModule } from '../mail/mail.module';
 import { CourierGatewayModule } from '../courier-gateway/courier-gateway.module';
 import { RoutingModule } from '../routing/routing.module';
 import { ReviewsModule } from '../reviews/reviews.module';
+import { ShiftsModule } from '../shifts/shifts.module';
 
 @Module({
-  imports: [MailModule, CourierGatewayModule, RoutingModule, ReviewsModule],
+  imports: [
+    MailModule,
+    CourierGatewayModule,
+    RoutingModule,
+    ReviewsModule,
+    ShiftsModule,
+  ],
   controllers: [OrderEventsConsumer, BatchAssignmentController],
   providers: [
     CourierAssignmentService,

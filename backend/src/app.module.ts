@@ -15,6 +15,7 @@ import { CourierGatewayModule } from './modules/courier-gateway/courier-gateway.
 import { CourierAssignmentModule } from './modules/courier-assignment/courier-assignment.module';
 import { MessagingModule } from './modules/messaging/messaging.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
+import { ShiftsModule } from './modules/shifts/shifts.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
     CourierGatewayModule,
     CourierAssignmentModule,
     ReviewsModule,
+    ShiftsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

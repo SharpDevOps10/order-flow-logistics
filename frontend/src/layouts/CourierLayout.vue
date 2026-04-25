@@ -39,6 +39,13 @@ const handleLogout = async () => {
             >
               Route Map
             </RouterLink>
+            <RouterLink
+              to="/courier/schedule"
+              class="text-sm px-3 py-1.5 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+              active-class="text-orange-700 font-medium bg-orange-50 hover:bg-orange-50 hover:text-orange-700"
+            >
+              Schedule
+            </RouterLink>
           </div>
         </div>
                 <div class="flex items-center gap-3">

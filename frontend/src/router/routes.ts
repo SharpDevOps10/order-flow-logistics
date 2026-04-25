@@ -138,6 +138,11 @@ export const routes: RouteRecordRaw[] = [
         name: 'route-map',
         component: () => import('@/views/courier/RouteMapView.vue'),
       },
+      {
+        path: 'schedule',
+        name: 'courier-schedule',
+        component: () => import('@/views/courier/MyScheduleView.vue'),
+      },
     ],
   },
   {
