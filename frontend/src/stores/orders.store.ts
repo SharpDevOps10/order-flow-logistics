@@ -135,6 +135,24 @@ export const useOrdersStore = defineStore('orders', () => {
     }
   }
 
+  const upsertOrderPartial = (
+    patch: Pick<Order, 'id' | 'status' | 'courierId'> &
+      Partial<Pick<Order, 'courierName'>>,
+  ) => {
+    const idx = orders.value.findIndex((o) => o.id === patch.id)
+    if (idx === -1) return
+    orders.value[idx] = { ...orders.value[idx], ...patch }
+  }
+
+  const prependOrder = (order: Order) => {
+    if (orders.value.some((o) => o.id === order.id)) return
+    orders.value.unshift(order)
+  }
+
+  const removeOrderById = (id: number) => {
+    orders.value = orders.value.filter((o) => o.id !== id)
+  }
+
   return {
     orders,
     loading,
@@ -149,5 +167,8 @@ export const useOrdersStore = defineStore('orders', () => {
     removeLocal,
     restoreLocal,
     cancelOnServer,
+    upsertOrderPartial,
+    prependOrder,
+    removeOrderById,
   }
 })

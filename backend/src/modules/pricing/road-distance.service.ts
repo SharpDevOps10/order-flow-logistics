@@ -7,6 +7,7 @@ export type DistanceSource = 'osrm' | 'haversine';
 
 export interface RoadDistanceResult {
   km: number;
+  durationSec: number | null;
   source: DistanceSource;
 }
 
@@ -38,16 +39,16 @@ export class RoadDistanceService {
     );
 
     if (haversine < 0.05) {
-      return { km: haversine, source: 'haversine' };
+      return { km: haversine, durationSec: null, source: 'haversine' };
     }
 
     const key = this.cacheKey(a, b);
     try {
       const cached = await this.redisService.get(key);
       if (cached !== null) {
-        const km = Number(cached);
-        if (Number.isFinite(km)) {
-          return { km, source: 'osrm' };
+        const parsed = this.parseCached(cached);
+        if (parsed) {
+          return { km: parsed.km, durationSec: parsed.durationSec, source: 'osrm' };
         }
       }
     } catch (err) {
@@ -56,22 +57,44 @@ export class RoadDistanceService {
       );
     }
 
-    const osrmKm = await this.queryOsrm(a, b);
-    if (osrmKm !== null) {
+    const osrm = await this.queryOsrm(a, b);
+    if (osrm !== null) {
       try {
-        await this.redisService.set(key, osrmKm.toFixed(3), CACHE_TTL_SECONDS);
+        await this.redisService.set(
+          key,
+          `${osrm.km.toFixed(3)}|${Math.round(osrm.durationSec)}`,
+          CACHE_TTL_SECONDS,
+        );
       } catch (err) {
         this.logger.warn(
           `Redis write failed for ${key}: ${(err as Error).message}`,
         );
       }
-      return { km: osrmKm, source: 'osrm' };
+      return { km: osrm.km, durationSec: osrm.durationSec, source: 'osrm' };
     }
 
     this.logger.warn(
       `OSRM unavailable for ${key} — falling back to Haversine (${haversine.toFixed(2)} km)`,
     );
-    return { km: haversine, source: 'haversine' };
+    return { km: haversine, durationSec: null, source: 'haversine' };
+  }
+
+  private parseCached(
+    raw: string,
+  ): { km: number; durationSec: number | null } | null {
+    if (raw.includes('|')) {
+      const [kmStr, durStr] = raw.split('|');
+      const km = Number(kmStr);
+      const durationSec = Number(durStr);
+      if (!Number.isFinite(km)) return null;
+      return {
+        km,
+        durationSec: Number.isFinite(durationSec) ? durationSec : null,
+      };
+    }
+    const km = Number(raw);
+    if (!Number.isFinite(km)) return null;
+    return { km, durationSec: null };
   }
 
   private cacheKey(
@@ -89,7 +112,7 @@ export class RoadDistanceService {
   private async queryOsrm(
     a: { lat: number; lng: number },
     b: { lat: number; lng: number },
-  ): Promise<number | null> {
+  ): Promise<{ km: number; durationSec: number } | null> {
     const url =
       `${this.baseUrl}/route/v1/driving/` +
       `${a.lng},${a.lat};${b.lng},${b.lat}?overview=false&alternatives=false&steps=false`;
@@ -105,15 +128,16 @@ export class RoadDistanceService {
       }
       const data = (await response.json()) as {
         code?: string;
-        routes?: { distance: number }[];
+        routes?: { distance: number; duration: number }[];
       };
       if (data.code !== 'Ok' || !data.routes?.length) {
         this.logger.warn(`OSRM returned no route (code=${data.code})`);
         return null;
       }
-      const meters = data.routes[0].distance;
-      if (!Number.isFinite(meters) || meters < 0) return null;
-      return meters / 1000;
+      const route = data.routes[0];
+      if (!Number.isFinite(route.distance) || route.distance < 0) return null;
+      if (!Number.isFinite(route.duration) || route.duration < 0) return null;
+      return { km: route.distance / 1000, durationSec: route.duration };
     } catch (err) {
       this.logger.warn(`OSRM request failed: ${(err as Error).message}`);
       return null;

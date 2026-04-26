@@ -141,11 +141,16 @@ function renderRoutes() {
         }).addTo(layerGroup!)
       })
     } else {
-      for (let i = 0; i < latlngs.length - 1; i++) {
-        L.polyline([latlngs[i], latlngs[i + 1]], {
+      const fallbackPath = [...latlngs]
+      if (props.courierPos && fallbackPath.length > 0) {
+        fallbackPath.unshift(L.latLng(props.courierPos.lat, props.courierPos.lng))
+      }
+      for (let i = 0; i < fallbackPath.length - 1; i++) {
+        L.polyline([fallbackPath[i], fallbackPath[i + 1]], {
           color: themeColor,
-          weight: 4,
-          opacity: 0.85,
+          weight: 3,
+          opacity: 0.7,
+          dashArray: '8, 8',
         }).addTo(layerGroup!)
       }
     }

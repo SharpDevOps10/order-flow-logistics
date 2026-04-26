@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service';
 import { haversineKm } from '../routing/dijkstra';
 
-const DEFAULT_WINDOW_MS = 60 * 60 * 1000;
+const DEFAULT_WINDOW_MS = 10 * 60 * 1000;
 const MIN_SAMPLES_FOR_REAL_AVG = 5;
 const FALLBACK_SPEED_KMH = 25;
 const MIN_ALLOWED_SPEED_KMH = 12;

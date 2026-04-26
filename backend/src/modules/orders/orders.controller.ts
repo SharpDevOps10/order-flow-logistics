@@ -89,6 +89,15 @@ export class OrdersController {
     return this.ordersService.getOrderEta(id, clientId);
   }
 
+  @Roles(Role.CLIENT)
+  @Get(':id/eta-context')
+  getEtaContext(
+    @Param('id', ParseIntPipe) id: number,
+    @GetCurrentUser('sub') clientId: number,
+  ) {
+    return this.ordersService.getOrderEtaContext(id, clientId);
+  }
+
   @Roles(Role.COURIER)
   @Get('courier')
   findCourierOrders(@GetCurrentUser('sub') courierId: number) {

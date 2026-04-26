@@ -5,7 +5,23 @@ import type {
   AssignCourierDto,
 } from '@/types/order.types'
 import type { OrderStatus } from '@/types/order.types'
+import type { OptimizedRoute } from '@/types/routing.types'
 import { axiosInstance } from './axios.instance'
+
+export type OrderEtaContextResponse =
+  | {
+      available: true
+      orderId: number
+      courierId: number
+      courierPos: { lat: number; lng: number } | null
+      routes: OptimizedRoute[]
+      avgSpeedKmh: number
+      isFallbackSpeed: boolean
+    }
+  | {
+      available: false
+      reason: 'order-not-in-transit' | 'no-route'
+    }
 
 export type OrderEtaResponse =
   | {
@@ -93,6 +109,13 @@ export const OrdersApi = {
 
   getEta: async (id: number): Promise<OrderEtaResponse> => {
     const { data } = await axiosInstance.get<OrderEtaResponse>(`/orders/${id}/eta`)
+    return data
+  },
+
+  getEtaContext: async (id: number): Promise<OrderEtaContextResponse> => {
+    const { data } = await axiosInstance.get<OrderEtaContextResponse>(
+      `/orders/${id}/eta-context`,
+    )
     return data
   },
 

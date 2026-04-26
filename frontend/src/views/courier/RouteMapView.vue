@@ -20,6 +20,9 @@ const courierPos = computed(() => (sim.enabled ? sim.currentPos : null))
 const { stats, speedKmh, etaByWaypoint, fetchStats } = useEta(
   toRef(store, 'routes'),
   courierPos,
+  toRef(store, 'firstSegmentKm'),
+  toRef(store, 'liveAvgSpeedKmh'),
+  toRef(store, 'firstSegmentDurationSec'),
 )
 
 const formatArrival = (wp: RouteWaypoint): string => {
@@ -225,8 +228,8 @@ onBeforeUnmount(() => {
             v-model.number="sim.speedKmh"
             type="range"
             min="10"
-            max="300"
-            step="10"
+            max="80"
+            step="5"
             class="flex-1 accent-blue-600"
           />
           <span class="text-xs font-mono text-gray-700 w-16 text-right">{{ sim.speedKmh }} km/h</span>

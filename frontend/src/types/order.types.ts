@@ -31,6 +31,7 @@ export interface Order {
   createdAt: string | null
   items?: OrderItem[]
   clientName?: string | null
+  courierName?: string | null
 }
 
 export interface OrderWithItems extends Order {

@@ -25,6 +25,9 @@ export interface WaypointEta {
 export const useEta = (
   routes: Ref<OptimizedRoute[]>,
   courierPos: Ref<LatLng | null>,
+  firstSegmentKm?: Ref<number | null>,
+  liveAvgSpeedKmh?: Ref<number | null>,
+  firstSegmentDurationSec?: Ref<number | null>,
 ) => {
   const stats = ref<CourierSpeedStats | null>(null)
   const statsLoading = ref(false)
@@ -40,15 +43,20 @@ export const useEta = (
     }
   }
 
-  const speedKmh = computed(() => stats.value?.avgSpeedKmh ?? 25)
+  const speedKmh = computed(
+    () => liveAvgSpeedKmh?.value ?? stats.value?.avgSpeedKmh ?? 25,
+  )
 
   const etaByWaypoint = computed<Map<RouteWaypoint, WaypointEta>>(() => {
     const map = new Map<RouteWaypoint, WaypointEta>()
     const now = Date.now()
 
     let cumulativeKm = 0
+    let cumulativeSec = 0
+    let allSegmentsHaveDuration = true
     let lastPos: LatLng | null = courierPos.value
     let lastActiveWp: RouteWaypoint | null = null
+    let firstSegmentApplied = false
 
     for (const route of routes.value) {
       let firstActiveInRoute = true
@@ -56,15 +64,34 @@ export const useEta = (
         if (wp.completed) continue
 
         let segKm: number
+        let segSec: number | null = null
         if (firstActiveInRoute) {
-          const ref = lastActiveWp ?? lastPos
-          segKm = ref ? haversineKm(ref, wp) : 0
+          if (
+            !firstSegmentApplied &&
+            lastActiveWp === null &&
+            firstSegmentKm?.value != null
+          ) {
+            segKm = firstSegmentKm.value
+            segSec = firstSegmentDurationSec?.value ?? null
+          } else {
+            const ref = lastActiveWp ?? lastPos
+            segKm = ref ? haversineKm(ref, wp) : 0
+          }
+          firstSegmentApplied = true
         } else {
           segKm = wp.distanceFromPrevKm
+          segSec = wp.durationFromPrevSec ?? null
         }
 
         cumulativeKm += segKm
-        const minutes = (cumulativeKm / speedKmh.value) * 60
+        if (segSec !== null) {
+          cumulativeSec += segSec
+        } else {
+          allSegmentsHaveDuration = false
+        }
+        const minutes = allSegmentsHaveDuration
+          ? cumulativeSec / 60
+          : (cumulativeKm / speedKmh.value) * 60
         map.set(wp, {
           distanceKm: cumulativeKm,
           minutes,

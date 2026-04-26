@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { and, eq, inArray } from 'drizzle-orm';
+import { alias } from 'drizzle-orm/pg-core';
 import * as schema from '../../database/schema';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { CreateOrderDto } from './dtos/create-order.dto';
@@ -29,6 +30,7 @@ import {
   RoadDistanceService,
   type DistanceSource,
 } from '../pricing/road-distance.service';
+import { OrdersGateway } from './orders.gateway';
 
 @Injectable()
 export class OrdersService {
@@ -42,6 +44,7 @@ export class OrdersService {
     private readonly courierStatsService: CourierStatsService,
     private readonly pricingService: PricingService,
     private readonly roadDistanceService: RoadDistanceService,
+    private readonly ordersGateway: OrdersGateway,
   ) {}
 
   async quoteDelivery(
@@ -109,7 +112,7 @@ export class OrdersService {
       distanceSource,
     });
 
-    return this.db.transaction(async (tx) => {
+    const created = await this.db.transaction(async (tx) => {
       const [order] = await tx
         .insert(schema.orders)
         .values({
@@ -138,17 +141,100 @@ export class OrdersService {
 
       return { ...order, items };
     });
+
+    void this.emitCreated(created.id);
+    return created;
+  }
+
+  private async emitCreated(orderId: number): Promise<void> {
+    try {
+      const [row] = await this.db
+        .select({
+          order: schema.orders,
+          clientName: schema.users.fullName,
+        })
+        .from(schema.orders)
+        .leftJoin(schema.users, eq(schema.orders.clientId, schema.users.id))
+        .where(eq(schema.orders.id, orderId));
+      if (!row) return;
+
+      const itemRows = await this.db
+        .select({
+          id: schema.orderItems.id,
+          orderId: schema.orderItems.orderId,
+          productId: schema.orderItems.productId,
+          quantity: schema.orderItems.quantity,
+          priceAtPurchase: schema.orderItems.priceAtPurchase,
+          productName: schema.products.name,
+          productImageUrl: schema.products.imageUrl,
+        })
+        .from(schema.orderItems)
+        .leftJoin(
+          schema.products,
+          eq(schema.orderItems.productId, schema.products.id),
+        )
+        .where(eq(schema.orderItems.orderId, orderId));
+
+      const payload = {
+        ...row.order,
+        clientName: row.clientName,
+        items: itemRows,
+      };
+
+      this.ordersGateway.emitOrderCreated(
+        row.order.organizationId,
+        row.order.clientId,
+        payload,
+      );
+    } catch (e) {
+      this.logger.warn(
+        `Failed to emit order:created for #${orderId}: ${String(e)}`,
+      );
+    }
+  }
+
+  private emitUpdated(
+    order: {
+      id: number;
+      organizationId: number;
+      clientId: number;
+      status: string;
+      courierId: number | null;
+    },
+    extras?: { courierName?: string | null },
+  ): void {
+    try {
+      this.ordersGateway.emitOrderUpdated({
+        id: order.id,
+        organizationId: order.organizationId,
+        clientId: order.clientId,
+        status: order.status,
+        courierId: order.courierId,
+        ...(extras?.courierName !== undefined && {
+          courierName: extras.courierName,
+        }),
+      });
+    } catch (e) {
+      this.logger.warn(
+        `Failed to emit order:updated for #${order.id}: ${String(e)}`,
+      );
+    }
   }
 
   async findMyOrders(clientId: number) {
-    const orders = await this.db
-      .select()
+    const courierUsers = alias(schema.users, 'courier_users');
+    const rows = await this.db
+      .select({
+        order: schema.orders,
+        courierName: courierUsers.fullName,
+      })
       .from(schema.orders)
+      .leftJoin(courierUsers, eq(schema.orders.courierId, courierUsers.id))
       .where(eq(schema.orders.clientId, clientId));
 
-    if (orders.length === 0) return [];
+    if (rows.length === 0) return [];
 
-    const orderIds = orders.map((o) => o.id);
+    const orderIds = rows.map((r) => r.order.id);
     const itemRows = await this.db
       .select({
         id: schema.orderItems.id,
@@ -172,9 +258,10 @@ export class OrdersService {
       itemsByOrder.get(row.orderId)!.push(row);
     }
 
-    return orders.map((o) => ({
-      ...o,
-      items: itemsByOrder.get(o.id) ?? [],
+    return rows.map((r) => ({
+      ...r.order,
+      courierName: r.courierName,
+      items: itemsByOrder.get(r.order.id) ?? [],
     }));
   }
 
@@ -188,13 +275,16 @@ export class OrdersService {
 
     const orgIds = supplierOrgs.map((o) => o.id);
 
+    const courierUsers = alias(schema.users, 'courier_users');
     const rows = await this.db
       .select({
         order: schema.orders,
         clientName: schema.users.fullName,
+        courierName: courierUsers.fullName,
       })
       .from(schema.orders)
       .leftJoin(schema.users, eq(schema.orders.clientId, schema.users.id))
+      .leftJoin(courierUsers, eq(schema.orders.courierId, courierUsers.id))
       .where(inArray(schema.orders.organizationId, orgIds));
 
     if (rows.length === 0) return [];
@@ -226,6 +316,7 @@ export class OrdersService {
     return rows.map((r) => ({
       ...r.order,
       clientName: r.clientName,
+      courierName: r.courierName,
       items: itemsByOrder.get(r.order.id) ?? [],
     }));
   }
@@ -292,6 +383,7 @@ export class OrdersService {
       }
     }
 
+    this.emitUpdated(updated);
     return updated;
   }
 
@@ -365,6 +457,7 @@ export class OrdersService {
       console.error('Failed to send courier assignment email:', error);
     }
 
+    this.emitUpdated(updated, { courierName: courier.fullName });
     return updated;
   }
 
@@ -393,6 +486,18 @@ export class OrdersService {
         .where(eq(schema.orderItems.orderId, orderId));
       await tx.delete(schema.orders).where(eq(schema.orders.id, orderId));
     });
+
+    try {
+      this.ordersGateway.emitOrderRemoved({
+        id: order.id,
+        organizationId: order.organizationId,
+        clientId: order.clientId,
+      });
+    } catch (e) {
+      this.logger.warn(
+        `Failed to emit order:removed for #${order.id}: ${String(e)}`,
+      );
+    }
 
     return order;
   }
@@ -457,6 +562,7 @@ export class OrdersService {
       .returning();
 
     await this.routingService.invalidateCourierRoute(courierId);
+    this.emitUpdated(updated);
 
     return updated;
   }
@@ -538,6 +644,54 @@ export class OrdersService {
     }
 
     return { available: false as const, reason: 'order-not-in-route' };
+  }
+
+  async getOrderEtaContext(orderId: number, clientId: number) {
+    const [order] = await this.db
+      .select()
+      .from(schema.orders)
+      .where(eq(schema.orders.id, orderId));
+
+    if (!order || order.clientId !== clientId) {
+      throw new NotFoundException('Order not found');
+    }
+
+    const eligibleStatuses: OrderStatus[] = [
+      OrderStatus.READY_FOR_DELIVERY,
+      OrderStatus.PICKED_UP,
+    ];
+    if (
+      !eligibleStatuses.includes(order.status as OrderStatus) ||
+      order.courierId === null
+    ) {
+      return {
+        available: false as const,
+        reason: 'order-not-in-transit' as const,
+      };
+    }
+
+    const courierPos = await this.getCourierLocationForEta(order.courierId);
+
+    let routes: OptimizedRoute[];
+    try {
+      routes = await this.routingService.getOptimizedRoute(order.courierId);
+    } catch {
+      return { available: false as const, reason: 'no-route' as const };
+    }
+
+    const stats = await this.courierStatsService.getAverageSpeed(
+      order.courierId,
+    );
+
+    return {
+      available: true as const,
+      orderId,
+      courierId: order.courierId,
+      courierPos,
+      routes,
+      avgSpeedKmh: stats.avgSpeedKmh,
+      isFallbackSpeed: stats.isFallback,
+    };
   }
 
   private async getCourierLocationForEta(

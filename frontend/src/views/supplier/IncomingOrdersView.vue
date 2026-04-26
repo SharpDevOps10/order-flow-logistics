@@ -3,6 +3,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useOrdersStore } from '@/stores/orders.store'
 import { useToast } from '@/composables/useToast'
+import { useOrderRealtime } from '@/composables/useOrderRealtime'
 import { UsersApi } from '@/api/users.api'
 import { OrderStatus } from '@/types/order.types'
 import type { Order } from '@/types/order.types'
@@ -37,6 +38,8 @@ const route = useRoute()
 const router = useRouter()
 const store = useOrdersStore()
 const toast = useToast()
+
+useOrderRealtime()
 
 const initialTab = TABS.some((t) => t.key === route.query.tab)
   ? (route.query.tab as TabKey)
@@ -427,8 +430,10 @@ onMounted(async () => {
           </div>
           <div class="bg-gray-50 rounded-xl px-4 py-3">
             <p class="text-xs text-gray-400 mb-1">Courier</p>
-            <p class="text-gray-700 font-medium">
-              {{ order.courierId ? `ID: ${order.courierId}` : 'Not assigned' }}
+            <p class="text-gray-700 font-medium truncate" :title="order.courierName ?? ''">
+              {{ order.courierId
+                ? (order.courierName ?? `Courier #${order.courierId}`)
+                : 'Not assigned' }}
             </p>
           </div>
         </div>

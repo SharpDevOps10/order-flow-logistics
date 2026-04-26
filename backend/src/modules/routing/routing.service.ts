@@ -22,6 +22,7 @@ import {
 import { solveTSP } from './tsp-solvers';
 import { OsmService } from './osm.service';
 import { RedisService } from '../redis/redis.service';
+import { RoadDistanceService } from '../pricing/road-distance.service';
 
 export const routeCacheKey = (courierId: number) =>
   `route:courier:${courierId}`;
@@ -35,6 +36,7 @@ export interface RoutePoint {
   lat: number;
   lng: number;
   distanceFromPrevKm: number;
+  durationFromPrevSec?: number;
   completed?: boolean;
 }
 
@@ -58,6 +60,7 @@ export class RoutingService {
     @Inject(DATABASE_CONNECTION) private db: NodePgDatabase<typeof schema>,
     private readonly osmService: OsmService,
     private readonly redisService: RedisService,
+    private readonly roadDistanceService: RoadDistanceService,
   ) {}
 
   private async getCourierLocation(
@@ -99,8 +102,22 @@ export class RoutingService {
     try {
       const cached = await this.redisService.get(key);
       if (cached) {
-        this.logger.log(`Route cache HIT for courier #${courierId}`);
-        return JSON.parse(cached) as OptimizedRoute[];
+        const parsed = JSON.parse(cached) as OptimizedRoute[];
+        const courierLocCheck = await this.getCourierLocation(courierId);
+        const isStale =
+          courierLocCheck !== null &&
+          parsed.some(
+            (r) =>
+              r.geometry === null &&
+              r.waypoints.some((wp) => !wp.completed),
+          );
+        if (!isStale) {
+          return parsed;
+        }
+        this.logger.log(
+          `Route cache STALE for courier #${courierId} (no geometry but courier is online) — recomputing`,
+        );
+        await this.redisService.del(key);
       }
     } catch (err) {
       this.logger.warn(
@@ -206,14 +223,25 @@ export class RoutingService {
         lng: parseFloat(o.lng!),
       }));
 
-      const startFromCourier = !hasPendingPickup && courierLoc !== null;
-      const startNode: GraphNode | null = startFromCourier
-        ? {
+      let startNode: GraphNode | null = null;
+      if (!hasPendingPickup) {
+        if (courierLoc) {
+          startNode = {
             id: COURIER_START_NODE_ID,
-            lat: courierLoc!.lat,
-            lng: courierLoc!.lng,
-          }
-        : null;
+            lat: courierLoc.lat,
+            lng: courierLoc.lng,
+          };
+        } else {
+          // Fallback: courier just completed pickup but hasn't reported live
+          // location yet. Use pickup point as their last known position so the
+          // route renders something instead of n=1 / 0 km.
+          startNode = {
+            id: COURIER_START_NODE_ID,
+            lat: pickupNode.lat,
+            lng: pickupNode.lng,
+          };
+        }
+      }
 
       const waypointNodes: GraphNode[] = [
         ...(startNode ? [startNode] : []),
@@ -321,11 +349,20 @@ export class RoutingService {
         }
       }
 
+      await this.attachDurations(waypoints, courierLoc);
+
       routes.push({
         totalDistanceKm: Math.round(totalDistanceKm * 1000) / 1000,
         waypoints,
         geometry,
       });
+    }
+
+    if (courierLoc === null) {
+      this.logger.log(
+        `Route NOT cached for courier #${courierId}: no live location yet (using fallback start), will recompute on next call`,
+      );
+      return routes;
     }
 
     try {
@@ -344,5 +381,42 @@ export class RoutingService {
     }
 
     return routes;
+  }
+
+  private async attachDurations(
+    waypoints: RoutePoint[],
+    courierLoc: { lat: number; lng: number } | null,
+  ): Promise<void> {
+    let prev: { lat: number; lng: number } | null = null;
+    for (let i = 0; i < waypoints.length; i++) {
+      const wp = waypoints[i];
+
+      if (wp.completed) {
+        prev = { lat: wp.lat, lng: wp.lng };
+        continue;
+      }
+
+      const from = prev ?? courierLoc;
+      if (!from) {
+        prev = { lat: wp.lat, lng: wp.lng };
+        continue;
+      }
+
+      try {
+        const result = await this.roadDistanceService.getDistanceKm(from, {
+          lat: wp.lat,
+          lng: wp.lng,
+        });
+        if (result.durationSec !== null) {
+          wp.durationFromPrevSec = Math.round(result.durationSec);
+        }
+      } catch (err) {
+        this.logger.warn(
+          `Duration fetch failed for waypoint ${i}: ${(err as Error).message}`,
+        );
+      }
+
+      prev = { lat: wp.lat, lng: wp.lng };
+    }
   }
 }

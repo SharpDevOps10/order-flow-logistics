@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { Inject, Logger, forwardRef } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -12,6 +12,7 @@ import { ConfigService } from '@nestjs/config';
 import { Socket } from 'socket.io';
 import { RedisService } from '../redis/redis.service';
 import { Role } from '../../common/enums/role.enum';
+import { OrdersGateway } from '../orders/orders.gateway';
 
 const LOCATION_TTL_SECONDS = 300;
 const LOCATION_HISTORY_TTL_SECONDS = 24 * 60 * 60;
@@ -27,6 +28,13 @@ interface ServerToClientEvents {
   'order:reassigned_away': (payload: {
     orderId: number;
     reason: 'optimization';
+  }) => void;
+  'route:first-segment': (payload: {
+    km: number;
+    durationSec?: number;
+    at: number;
+    avgSpeedKmh: number;
+    isFallbackSpeed: boolean;
   }) => void;
 }
 
@@ -53,6 +61,8 @@ export class CourierGateway
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
     private readonly redisService: RedisService,
+    @Inject(forwardRef(() => OrdersGateway))
+    private readonly ordersGateway: OrdersGateway,
   ) {}
 
   handleConnection(client: CourierSocket) {
@@ -138,8 +148,22 @@ export class CourierGateway
     );
     await this.redisService.expire(historyKey, LOCATION_HISTORY_TTL_SECONDS);
 
-    this.logger.debug(
-      `Location updated: courier #${courierId} → (${data.lat}, ${data.lng})`,
-    );
+    void this.ordersGateway
+      .broadcastCourierPosition(courierId, data.lat, data.lng)
+      .then((result) => {
+        if (!result || result.firstSegmentKm === null) return;
+        const sock = this.clients.get(courierId);
+        if (sock) {
+          sock.emit('route:first-segment', {
+            km: result.firstSegmentKm,
+            ...(result.firstSegmentDurationSec !== null && {
+              durationSec: result.firstSegmentDurationSec,
+            }),
+            at: Date.now(),
+            avgSpeedKmh: result.avgSpeedKmh,
+            isFallbackSpeed: result.isFallbackSpeed,
+          });
+        }
+      });
   }
 }

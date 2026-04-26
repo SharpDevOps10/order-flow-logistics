@@ -12,6 +12,13 @@ interface ServerToClientEvents {
     orderId: number
     reason: 'optimization'
   }) => void
+  'route:first-segment': (payload: {
+    km: number
+    durationSec?: number
+    at: number
+    avgSpeedKmh: number
+    isFallbackSpeed: boolean
+  }) => void
 }
 
 interface ClientToServerEvents {
@@ -19,6 +26,7 @@ interface ClientToServerEvents {
 }
 
 const LOCATION_INTERVAL_MS = 60_000
+const SIM_EMIT_INTERVAL_MS = 5_000
 
 export const useCourierSocket = () => {
   const authStore = useAuthStore()
@@ -31,6 +39,7 @@ export const useCourierSocket = () => {
   let geoWatchId: number | null = null
   let lastPos: { lat: number; lng: number } | null = null
   let locationTimer: ReturnType<typeof setInterval> | null = null
+  let lastSimEmitAt = 0
 
   const connect = () => {
     if (socket || !authStore.accessToken) return
@@ -61,6 +70,19 @@ export const useCourierSocket = () => {
       routingStore.fetchRoute()
       ordersStore.fetchCourier()
     })
+
+    socket.on(
+      'route:first-segment',
+      ({ km, durationSec, at, avgSpeedKmh, isFallbackSpeed }) => {
+        routingStore.setFirstSegment(
+          km,
+          at,
+          avgSpeedKmh,
+          isFallbackSpeed,
+          durationSec,
+        )
+      },
+    )
   }
 
   const startLocationBroadcast = () => {
@@ -87,9 +109,11 @@ export const useCourierSocket = () => {
   const stopSimWatch = watch(
     () => simulationStore.currentPos,
     (pos) => {
-      if (simulationStore.enabled && pos && socket?.connected) {
-        socket.emit('courier:location', pos)
-      }
+      if (!simulationStore.enabled || !pos || !socket?.connected) return
+      const now = Date.now()
+      if (now - lastSimEmitAt < SIM_EMIT_INTERVAL_MS) return
+      lastSimEmitAt = now
+      socket.emit('courier:location', pos)
     },
   )
 

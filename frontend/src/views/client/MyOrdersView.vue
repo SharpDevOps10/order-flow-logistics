@@ -4,10 +4,11 @@ import { useRouter } from 'vue-router'
 import { useOrdersStore } from '@/stores/orders.store'
 import { useOrganizationsStore } from '@/stores/organizations.store'
 import { useToast } from '@/composables/useToast'
+import { useOrderRealtime } from '@/composables/useOrderRealtime'
+import { useClientOrderEtas } from '@/composables/useClientOrderEtas'
 import { OrderStatus } from '@/types/order.types'
 import type { Order } from '@/types/order.types'
 import type { OrderReview, CourierRatingStats } from '@/types/review.types'
-import { OrdersApi, type OrderEtaResponse } from '@/api/orders.api'
 import { ReviewsApi } from '@/api/reviews.api'
 import AppButton from '@/components/common/AppButton.vue'
 import AppSpinner from '@/components/common/AppSpinner.vue'
@@ -21,6 +22,9 @@ const store = useOrdersStore()
 const orgsStore = useOrganizationsStore()
 const router = useRouter()
 const toast = useToast()
+
+useOrderRealtime()
+const { etaByOrder } = useClientOrderEtas(computed(() => store.orders))
 
 const expandedRoutes = ref<Set<number>>(new Set())
 const expandedItems = ref<Set<number>>(new Set())
@@ -206,43 +210,21 @@ const handleCancel = (order: Order) => {
   pendingCancel = { order: removed.order, index: removed.index, timerId }
 }
 
-const etas = ref<Map<number, OrderEtaResponse>>(new Map())
-let etaTimer: ReturnType<typeof setInterval> | null = null
-
 const isEtaEligible = (order: Order): boolean =>
   order.status === OrderStatus.ReadyForDelivery ||
   order.status === OrderStatus.PickedUp
 
-const refreshEtas = async () => {
-  const eligible = store.orders.filter(isEtaEligible)
-  const results = await Promise.all(
-    eligible.map(async (o) => {
-      try {
-        return [o.id, await OrdersApi.getEta(o.id)] as const
-      } catch {
-        return null
-      }
-    }),
-  )
-  const next = new Map<number, OrderEtaResponse>()
-  for (const entry of results) {
-    if (entry) next.set(entry[0], entry[1])
-  }
-  etas.value = next
-}
-
-const formatEtaLine = (eta: OrderEtaResponse): string => {
-  if (!eta.available) return ''
-  const arrival = new Date(eta.arrivalAt)
-  const hh = arrival.getHours().toString().padStart(2, '0')
-  const mm = arrival.getMinutes().toString().padStart(2, '0')
-  const mins = Math.max(0, eta.minutes)
+const formatEtaLine = (arrivalAt: Date, minutes: number): string => {
+  const hh = arrivalAt.getHours().toString().padStart(2, '0')
+  const mm = arrivalAt.getMinutes().toString().padStart(2, '0')
+  const mins = Math.max(0, Math.round(minutes))
   return `arrives in ~${mins} min · ${hh}:${mm}`
 }
 
 const etaUnavailableLabel = (reason: string): string => {
-  if (reason === 'courier-offline') return 'Courier is offline'
+  if (reason === 'order-not-in-transit') return ''
   if (reason === 'no-route') return 'Route unavailable'
+  if (reason === 'loading') return 'Calculating ETA...'
   return 'ETA unavailable'
 }
 
@@ -305,12 +287,10 @@ const orderCountLabel = computed(() =>
 onMounted(async () => {
   await Promise.all([store.fetchMy(), orgsStore.fetchAll()])
   if (store.error) toast.error(store.error)
-  await Promise.all([refreshEtas(), fetchReviewsAndStats()])
-  etaTimer = setInterval(refreshEtas, 60_000)
+  await fetchReviewsAndStats()
 })
 
 onBeforeUnmount(() => {
-  if (etaTimer) clearInterval(etaTimer)
   void flushPendingCancel()
 })
 </script>
@@ -477,8 +457,10 @@ onBeforeUnmount(() => {
           </div>
           <div class="bg-gray-50 rounded-xl px-4 py-3">
             <p class="text-xs text-gray-400 mb-1">Courier</p>
-            <p class="text-gray-700 font-medium">
-              {{ order.courierId ? `Assigned (ID: ${order.courierId})` : 'Not assigned yet' }}
+            <p class="text-gray-700 font-medium truncate" :title="order.courierName ?? ''">
+              {{ order.courierId
+                ? (order.courierName ?? `Courier #${order.courierId}`)
+                : 'Not assigned yet' }}
             </p>
             <p
               v-if="order.courierId && courierStats.get(order.courierId)"
@@ -497,26 +479,37 @@ onBeforeUnmount(() => {
         </div>
 
         <div
-          v-if="isEtaEligible(order) && etas.get(order.id)"
+          v-if="isEtaEligible(order) && etaByOrder.get(order.id)"
           class="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-xl px-4 py-2.5"
         >
           <svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="9" />
             <path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2" />
           </svg>
-          <template v-if="etas.get(order.id)!.available">
-            <div class="flex-1">
-              <p class="text-sm font-medium text-blue-800">
-                Your order {{ formatEtaLine(etas.get(order.id)!) }}
+          <template v-if="etaByOrder.get(order.id)!.available">
+            <div class="flex-1 flex items-center gap-2">
+              <p class="text-sm font-medium text-blue-800 flex-1">
+                Your order {{ formatEtaLine(
+                  (etaByOrder.get(order.id) as { arrivalAt: Date }).arrivalAt,
+                  (etaByOrder.get(order.id) as { minutes: number }).minutes,
+                ) }}
+                <span
+                  v-if="(etaByOrder.get(order.id) as { isFallbackSpeed: boolean }).isFallbackSpeed"
+                  class="ml-1 text-[10px] text-blue-500/60"
+                >(approximate)</span>
               </p>
-              <p v-if="(etas.get(order.id) as { stopsAhead?: number }).stopsAhead! > 0" class="text-xs text-blue-600/70 mt-0.5">
-                {{ (etas.get(order.id) as { stopsAhead: number }).stopsAhead }} {{ (etas.get(order.id) as { stopsAhead: number }).stopsAhead === 1 ? 'delivery' : 'deliveries' }} ahead of you
-                <span v-if="(etas.get(order.id) as { isFallbackSpeed?: boolean }).isFallbackSpeed" class="ml-1 text-[10px] text-blue-500/60">(approximate)</span>
-              </p>
+              <span
+                v-if="(etaByOrder.get(order.id) as { isPositionLive: boolean }).isPositionLive"
+                class="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700"
+                title="Live tracking"
+              >
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                LIVE
+              </span>
             </div>
           </template>
           <template v-else>
-            <p class="text-sm text-gray-500">{{ etaUnavailableLabel(etas.get(order.id)!.reason) }}</p>
+            <p class="text-sm text-gray-500">{{ etaUnavailableLabel(etaByOrder.get(order.id)!.reason) }}</p>
           </template>
         </div>
 
