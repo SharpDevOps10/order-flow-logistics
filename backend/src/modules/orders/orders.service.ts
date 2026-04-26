@@ -503,7 +503,7 @@ export class OrdersService {
   }
 
   async findCourierOrders(courierId: number) {
-    return this.db
+    const orders = await this.db
       .select()
       .from(schema.orders)
       .where(
@@ -515,6 +515,37 @@ export class OrdersService {
           ]),
         ),
       );
+
+    if (orders.length === 0) return [];
+
+    const orderIds = orders.map((o) => o.id);
+    const itemRows = await this.db
+      .select({
+        id: schema.orderItems.id,
+        orderId: schema.orderItems.orderId,
+        productId: schema.orderItems.productId,
+        quantity: schema.orderItems.quantity,
+        priceAtPurchase: schema.orderItems.priceAtPurchase,
+        productName: schema.products.name,
+        productImageUrl: schema.products.imageUrl,
+      })
+      .from(schema.orderItems)
+      .leftJoin(
+        schema.products,
+        eq(schema.orderItems.productId, schema.products.id),
+      )
+      .where(inArray(schema.orderItems.orderId, orderIds));
+
+    const itemsByOrder = new Map<number, typeof itemRows>();
+    for (const row of itemRows) {
+      if (!itemsByOrder.has(row.orderId)) itemsByOrder.set(row.orderId, []);
+      itemsByOrder.get(row.orderId)!.push(row);
+    }
+
+    return orders.map((o) => ({
+      ...o,
+      items: itemsByOrder.get(o.id) ?? [],
+    }));
   }
 
   async markPickedUp(orderId: number, courierId: number) {
