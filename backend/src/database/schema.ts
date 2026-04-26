@@ -83,6 +83,10 @@ export const products = pgTable('products', {
   organizationId: integer('organization_id')
     .references(() => organizations.id)
     .notNull(),
+  sku: varchar('sku', { length: 64 }),
+  category: varchar('category', { length: 64 }),
+  inStock: boolean('in_stock').default(true).notNull(),
+  imageUrl: text('image_url'),
   createdAt: timestamp('created_at').defaultNow(),
 });
 

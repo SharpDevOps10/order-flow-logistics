@@ -13,6 +13,7 @@ const { toasts } = useToast()
     :key="t.id"
     :message="t.message"
     :type="t.type"
+    :action="t.action"
     :visible="true"
     @close="toasts.splice(toasts.findIndex(x => x.id === t.id), 1)"
   />

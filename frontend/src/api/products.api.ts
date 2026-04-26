@@ -21,4 +21,27 @@ export const ProductsApi = {
     const { data } = await axiosInstance.delete<Product>(`/products/${id}`)
     return data
   },
+
+  getCategories: async (orgId: number): Promise<string[]> => {
+    const { data } = await axiosInstance.get<string[]>(
+      `/organizations/${orgId}/products/categories`,
+    )
+    return data
+  },
+
+  uploadImage: async (id: number, file: File): Promise<Product> => {
+    const form = new FormData()
+    form.append('image', file)
+    const { data } = await axiosInstance.post<Product>(
+      `/products/${id}/image`,
+      form,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    )
+    return data
+  },
+
+  deleteImage: async (id: number): Promise<Product> => {
+    const { data } = await axiosInstance.delete<Product>(`/products/${id}/image`)
+    return data
+  },
 }
