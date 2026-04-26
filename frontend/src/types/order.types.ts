@@ -30,6 +30,7 @@ export interface Order {
   pricingBreakdown: unknown | null
   createdAt: string | null
   items?: OrderItem[]
+  clientName?: string | null
 }
 
 export interface OrderWithItems extends Order {

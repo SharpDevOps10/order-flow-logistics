@@ -188,10 +188,46 @@ export class OrdersService {
 
     const orgIds = supplierOrgs.map((o) => o.id);
 
-    return this.db
-      .select()
+    const rows = await this.db
+      .select({
+        order: schema.orders,
+        clientName: schema.users.fullName,
+      })
       .from(schema.orders)
+      .leftJoin(schema.users, eq(schema.orders.clientId, schema.users.id))
       .where(inArray(schema.orders.organizationId, orgIds));
+
+    if (rows.length === 0) return [];
+
+    const orderIds = rows.map((r) => r.order.id);
+    const itemRows = await this.db
+      .select({
+        id: schema.orderItems.id,
+        orderId: schema.orderItems.orderId,
+        productId: schema.orderItems.productId,
+        quantity: schema.orderItems.quantity,
+        priceAtPurchase: schema.orderItems.priceAtPurchase,
+        productName: schema.products.name,
+        productImageUrl: schema.products.imageUrl,
+      })
+      .from(schema.orderItems)
+      .leftJoin(
+        schema.products,
+        eq(schema.orderItems.productId, schema.products.id),
+      )
+      .where(inArray(schema.orderItems.orderId, orderIds));
+
+    const itemsByOrder = new Map<number, typeof itemRows>();
+    for (const row of itemRows) {
+      if (!itemsByOrder.has(row.orderId)) itemsByOrder.set(row.orderId, []);
+      itemsByOrder.get(row.orderId)!.push(row);
+    }
+
+    return rows.map((r) => ({
+      ...r.order,
+      clientName: r.clientName,
+      items: itemsByOrder.get(r.order.id) ?? [],
+    }));
   }
 
   async updateStatus(
