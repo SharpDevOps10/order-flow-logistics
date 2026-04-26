@@ -16,6 +16,7 @@ import { CourierAssignmentModule } from './modules/courier-assignment/courier-as
 import { MessagingModule } from './modules/messaging/messaging.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { ShiftsModule } from './modules/shifts/shifts.module';
+import { PricingModule } from './modules/pricing/pricing.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { ShiftsModule } from './modules/shifts/shifts.module';
     CourierAssignmentModule,
     ReviewsModule,
     ShiftsModule,
+    PricingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

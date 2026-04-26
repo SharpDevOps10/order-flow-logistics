@@ -31,6 +31,15 @@ export class OrdersController {
   }
 
   @Roles(Role.CLIENT)
+  @Post('quote')
+  quote(
+    @Body()
+    dto: { organizationId: number; lat?: string; lng?: string },
+  ) {
+    return this.ordersService.quoteDelivery(dto.organizationId, dto.lat, dto.lng);
+  }
+
+  @Roles(Role.CLIENT)
   @Get('my')
   findMy(@GetCurrentUser('sub') clientId: number) {
     return this.ordersService.findMyOrders(clientId);

@@ -294,9 +294,14 @@ onBeforeUnmount(() => {
             </div>
             <p class="text-xs text-gray-400 mt-1">{{ formatDate(order.createdAt) }}</p>
           </div>
-          <p class="text-lg font-bold text-gray-900 flex-shrink-0">
-            ₴{{ order.totalAmount.toFixed(2) }}
-          </p>
+          <div class="flex-shrink-0 text-right">
+            <p class="text-lg font-bold text-gray-900">
+              ₴{{ (order.totalAmount + order.deliveryFee).toFixed(2) }}
+            </p>
+            <p v-if="order.deliveryFee > 0" class="text-xs text-gray-400 mt-0.5">
+              incl. ₴{{ order.deliveryFee }} delivery
+            </p>
+          </div>
         </div>
 
                 <div class="grid grid-cols-2 gap-3 text-sm">

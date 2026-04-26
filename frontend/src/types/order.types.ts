@@ -24,6 +24,8 @@ export interface Order {
   deliveryAddress: string
   lat: string | null
   lng: string | null
+  deliveryFee: number
+  pricingBreakdown: unknown | null
   createdAt: string | null
 }
 

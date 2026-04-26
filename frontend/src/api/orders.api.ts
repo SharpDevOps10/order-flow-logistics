@@ -22,6 +22,29 @@ export type OrderEtaResponse =
       reason: 'order-not-in-transit' | 'courier-offline' | 'no-route' | 'order-not-in-route'
     }
 
+export interface PricingBreakdownItem {
+  label: string
+  amount: number
+  detail?: string
+}
+
+export interface PricingBreakdown {
+  distanceKm: number
+  distanceSource: 'osrm' | 'haversine'
+  base: number
+  distanceFee: number
+  rushMultiplier: number
+  rushLabel: string | null
+  loadMultiplier: number
+  systemLoadRatio: number
+  activeOrders: number
+  availableCouriers: number
+  subtotal: number
+  afterRush: number
+  finalFee: number
+  items: PricingBreakdownItem[]
+}
+
 export const OrdersApi = {
   getMy: async (): Promise<Order[]> => {
     const { data } = await axiosInstance.get<Order[]>('/orders/my')
@@ -70,6 +93,15 @@ export const OrdersApi = {
 
   getEta: async (id: number): Promise<OrderEtaResponse> => {
     const { data } = await axiosInstance.get<OrderEtaResponse>(`/orders/${id}/eta`)
+    return data
+  },
+
+  quoteDelivery: async (params: {
+    organizationId: number
+    lat?: string
+    lng?: string
+  }): Promise<PricingBreakdown> => {
+    const { data } = await axiosInstance.post<PricingBreakdown>('/orders/quote', params)
     return data
   },
 }

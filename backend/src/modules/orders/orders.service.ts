@@ -24,6 +24,11 @@ import { RoutingService } from '../routing/routing.service';
 import { OrderEventsPublisher } from '../messaging/order-events.publisher';
 import { CourierStatsService } from '../courier-gateway/courier-stats.service';
 import { haversineKm } from '../routing/dijkstra';
+import { PricingService } from '../pricing/pricing.service';
+import {
+  RoadDistanceService,
+  type DistanceSource,
+} from '../pricing/road-distance.service';
 
 @Injectable()
 export class OrdersService {
@@ -35,7 +40,39 @@ export class OrdersService {
     private readonly orderEventsPublisher: OrderEventsPublisher,
     private readonly routingService: RoutingService,
     private readonly courierStatsService: CourierStatsService,
+    private readonly pricingService: PricingService,
+    private readonly roadDistanceService: RoadDistanceService,
   ) {}
+
+  async quoteDelivery(
+    organizationId: number,
+    deliveryLat: string | undefined,
+    deliveryLng: string | undefined,
+  ) {
+    const { km, source } = await this.computeDistance(
+      organizationId,
+      deliveryLat,
+      deliveryLng,
+    );
+    return this.pricingService.quote({ distanceKm: km, distanceSource: source });
+  }
+
+  private async computeDistance(
+    organizationId: number,
+    deliveryLat: string | undefined,
+    deliveryLng: string | undefined,
+  ): Promise<{ km: number; source: DistanceSource }> {
+    if (!deliveryLat || !deliveryLng) return { km: 0, source: 'haversine' };
+    const [org] = await this.db
+      .select()
+      .from(schema.organizations)
+      .where(eq(schema.organizations.id, organizationId));
+    if (!org || !org.lat || !org.lng) return { km: 0, source: 'haversine' };
+    return this.roadDistanceService.getDistanceKm(
+      { lat: parseFloat(org.lat), lng: parseFloat(org.lng) },
+      { lat: parseFloat(deliveryLat), lng: parseFloat(deliveryLng) },
+    );
+  }
 
   async create(dto: CreateOrderDto, clientId: number) {
     const productIds = dto.items.map((item) => item.productId);
@@ -62,6 +99,16 @@ export class OrdersService {
       return sum + priceMap.get(item.productId)! * item.quantity;
     }, 0);
 
+    const { km: distanceKm, source: distanceSource } = await this.computeDistance(
+      dto.organizationId,
+      dto.lat,
+      dto.lng,
+    );
+    const pricing = await this.pricingService.quote({
+      distanceKm,
+      distanceSource,
+    });
+
     return this.db.transaction(async (tx) => {
       const [order] = await tx
         .insert(schema.orders)
@@ -72,6 +119,8 @@ export class OrdersService {
           lat: dto.lat,
           lng: dto.lng,
           totalAmount,
+          deliveryFee: pricing.finalFee,
+          pricingBreakdown: pricing,
         })
         .returning();
 

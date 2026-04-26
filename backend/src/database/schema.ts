@@ -8,6 +8,7 @@ import {
   pgEnum,
   decimal,
   boolean,
+  jsonb,
 } from 'drizzle-orm/pg-core';
 import { Role } from '../common/enums/role.enum';
 import { OrderStatus } from '../common/enums/order-status.enum';
@@ -67,6 +68,9 @@ export const orders = pgTable('orders', {
   deliveryAddress: text('delivery_address').notNull(),
   lat: decimal('lat', { precision: 10, scale: 7 }),
   lng: decimal('lng', { precision: 10, scale: 7 }),
+
+  deliveryFee: integer('delivery_fee').notNull().default(0),
+  pricingBreakdown: jsonb('pricing_breakdown'),
 
   createdAt: timestamp('created_at').defaultNow(),
 });
