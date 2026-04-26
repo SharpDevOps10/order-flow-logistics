@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, toRef, watch } from 'vue'
+import { computed, onMounted, toRef, watch } from 'vue'
 import { useRoutingStore } from '@/stores/routing.store'
 import { useSimulationStore } from '@/stores/simulation.store'
 import { useToast } from '@/composables/useToast'
@@ -111,9 +111,6 @@ watch(
   { deep: true },
 )
 
-onBeforeUnmount(() => {
-  sim.disable()
-})
 </script>
 
 <template>
