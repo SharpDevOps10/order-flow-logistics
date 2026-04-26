@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray, sql } from 'drizzle-orm';
 import * as schema from '../../database/schema';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { CreateReviewDto } from './dtos/create-review.dto';
@@ -127,7 +127,7 @@ export class ReviewsService {
         sum: sql<number>`coalesce(sum(${schema.orderReviews.courierRating}), 0)::int`,
       })
       .from(schema.orderReviews)
-      .where(sql`${schema.orderReviews.courierId} = ANY(${courierIds})`)
+      .where(inArray(schema.orderReviews.courierId, courierIds))
       .groupBy(schema.orderReviews.courierId);
 
     const stats = new Map(

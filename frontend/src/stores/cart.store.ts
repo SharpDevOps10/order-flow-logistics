@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import type { Product } from '@/types/product.types'
 
@@ -7,9 +7,35 @@ export interface CartItem {
   quantity: number
 }
 
+const STORAGE_KEY = 'orderflow.cart.v1'
+
+interface PersistedState {
+  items: CartItem[]
+  organizationId: number | null
+}
+
+const loadPersisted = (): PersistedState => {
+  if (typeof window === 'undefined') return { items: [], organizationId: null }
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return { items: [], organizationId: null }
+    const parsed = JSON.parse(raw) as Partial<PersistedState>
+    if (!Array.isArray(parsed.items)) return { items: [], organizationId: null }
+    return {
+      items: parsed.items,
+      organizationId:
+        typeof parsed.organizationId === 'number' ? parsed.organizationId : null,
+    }
+  } catch {
+    return { items: [], organizationId: null }
+  }
+}
+
 export const useCartStore = defineStore('cart', () => {
-  const items = ref<CartItem[]>([])
-  const organizationId = ref<number | null>(null)
+  const persisted = loadPersisted()
+
+  const items = ref<CartItem[]>(persisted.items)
+  const organizationId = ref<number | null>(persisted.organizationId)
 
   const total = computed(() =>
     items.value.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
@@ -54,6 +80,26 @@ export const useCartStore = defineStore('cart', () => {
     items.value = []
     organizationId.value = null
   }
+
+  watch(
+    [items, organizationId],
+    ([nextItems, nextOrgId]) => {
+      if (typeof window === 'undefined') return
+      try {
+        if (nextItems.length === 0 && nextOrgId === null) {
+          window.localStorage.removeItem(STORAGE_KEY)
+        } else {
+          window.localStorage.setItem(
+            STORAGE_KEY,
+            JSON.stringify({ items: nextItems, organizationId: nextOrgId }),
+          )
+        }
+      } catch {
+        // ignore — storage may be full or disabled
+      }
+    },
+    { deep: true },
+  )
 
   return { items, organizationId, total, itemCount, isEmpty, addItem, removeItem, updateQuantity, clear }
 })

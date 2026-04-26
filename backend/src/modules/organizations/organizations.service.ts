@@ -5,13 +5,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import * as schema from '../../database/schema';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { CreateOrganizationDto } from './dtos/create-organization.dto';
 import { and } from 'drizzle-orm/sql/expressions/conditions';
 import { UpdateOrganizationDto } from './dtos/update-organization.dto';
 import { MailService } from '../mail/mail.service';
+
+type Org = typeof schema.organizations.$inferSelect;
+type OrgWithSummary = Org & { productCount: number; categories: string[] };
 
 @Injectable()
 export class OrganizationsService {
@@ -52,10 +55,11 @@ export class OrganizationsService {
   }
 
   async getMyOrganizations(ownerId: number) {
-    return this.db
+    const orgs = await this.db
       .select()
       .from(schema.organizations)
       .where(eq(schema.organizations.ownerId, ownerId));
+    return this.attachProductSummaries(orgs);
   }
 
   async getPending() {
@@ -115,9 +119,41 @@ export class OrganizationsService {
   }
 
   async getApproved() {
-    return this.db
+    const orgs = await this.db
       .select()
       .from(schema.organizations)
       .where(eq(schema.organizations.isApproved, 1));
+    return this.attachProductSummaries(orgs);
+  }
+
+  private async attachProductSummaries(orgs: Org[]): Promise<OrgWithSummary[]> {
+    if (orgs.length === 0) return [];
+    const ids = orgs.map((o) => o.id);
+
+    const rows = await this.db
+      .select({
+        organizationId: schema.products.organizationId,
+        category: schema.products.category,
+      })
+      .from(schema.products)
+      .where(inArray(schema.products.organizationId, ids));
+
+    const counts = new Map<number, number>();
+    const cats = new Map<number, Set<string>>();
+    for (const r of rows) {
+      counts.set(r.organizationId, (counts.get(r.organizationId) ?? 0) + 1);
+      if (r.category) {
+        if (!cats.has(r.organizationId)) cats.set(r.organizationId, new Set());
+        cats.get(r.organizationId)!.add(r.category);
+      }
+    }
+
+    return orgs.map((o) => ({
+      ...o,
+      productCount: counts.get(o.id) ?? 0,
+      categories: Array.from(cats.get(o.id) ?? []).sort((a, b) =>
+        a.localeCompare(b),
+      ),
+    }));
   }
 }

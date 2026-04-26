@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { NodePgDatabase } from 'drizzle-orm/node-postgres';
-import { eq, sql } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import * as schema from '../../database/schema';
 import { DATABASE_CONNECTION } from '../../database/database.module';
 import { SetShiftsDto, ShiftSlotDto } from './dtos/set-shifts.dto';
@@ -64,7 +64,7 @@ export class ShiftsService {
         endMinute: schema.courierShifts.endMinute,
       })
       .from(schema.courierShifts)
-      .where(sql`${schema.courierShifts.courierId} = ANY(${courierIds})`);
+      .where(inArray(schema.courierShifts.courierId, courierIds));
 
     const hasAnyShifts = new Set<number>(rows.map((r) => r.courierId));
     const onShift = new Set<number>();

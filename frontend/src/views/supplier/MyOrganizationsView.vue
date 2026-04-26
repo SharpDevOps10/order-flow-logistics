@@ -58,6 +58,7 @@ onMounted(async () => {
         v-for="org in store.organizations"
         :key="org.id"
         :organization="org"
+        show-approval-status
       >
         <AppButton variant="green" size="sm" @click="goToProducts(org.id)">
           Products

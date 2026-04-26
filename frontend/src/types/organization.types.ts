@@ -7,6 +7,8 @@ export interface Organization {
   lat: string | null
   lng: string | null
   isApproved: number
+  productCount?: number
+  categories?: string[]
 }
 
 export interface CreateOrganizationDto {
