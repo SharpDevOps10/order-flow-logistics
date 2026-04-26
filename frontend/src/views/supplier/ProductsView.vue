@@ -86,7 +86,7 @@ onMounted(async () => {
       >
                 <div class="flex-1 min-w-0">
           <p class="text-base font-semibold text-gray-900 truncate">{{ product.name }}</p>
-          <p v-if="product.description" class="text-sm text-gray-500 truncate mt-0.5">
+          <p v-if="product.description" class="text-sm text-gray-500 mt-0.5 break-words whitespace-pre-line">
             {{ product.description }}
           </p>
         </div>
