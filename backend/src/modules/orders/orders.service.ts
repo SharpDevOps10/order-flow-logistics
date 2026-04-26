@@ -20,7 +20,7 @@ import {
 import { Role } from '../../common/enums/role.enum';
 import { MailService } from '../mail/mail.service';
 import { OrderReadyEvent } from '../courier-assignment/courier-assignment.service';
-import { RoutingService } from '../routing/routing.service';
+import { RoutingService, OptimizedRoute } from '../routing/routing.service';
 import { OrderEventsPublisher } from '../messaging/order-events.publisher';
 import { CourierStatsService } from '../courier-gateway/courier-stats.service';
 import { haversineKm } from '../routing/dijkstra';
@@ -54,7 +54,10 @@ export class OrdersService {
       deliveryLat,
       deliveryLng,
     );
-    return this.pricingService.quote({ distanceKm: km, distanceSource: source });
+    return this.pricingService.quote({
+      distanceKm: km,
+      distanceSource: source,
+    });
   }
 
   private async computeDistance(
@@ -99,11 +102,8 @@ export class OrdersService {
       return sum + priceMap.get(item.productId)! * item.quantity;
     }, 0);
 
-    const { km: distanceKm, source: distanceSource } = await this.computeDistance(
-      dto.organizationId,
-      dto.lat,
-      dto.lng,
-    );
+    const { km: distanceKm, source: distanceSource } =
+      await this.computeDistance(dto.organizationId, dto.lat, dto.lng);
     const pricing = await this.pricingService.quote({
       distanceKm,
       distanceSource,
@@ -141,10 +141,41 @@ export class OrdersService {
   }
 
   async findMyOrders(clientId: number) {
-    return this.db
+    const orders = await this.db
       .select()
       .from(schema.orders)
       .where(eq(schema.orders.clientId, clientId));
+
+    if (orders.length === 0) return [];
+
+    const orderIds = orders.map((o) => o.id);
+    const itemRows = await this.db
+      .select({
+        id: schema.orderItems.id,
+        orderId: schema.orderItems.orderId,
+        productId: schema.orderItems.productId,
+        quantity: schema.orderItems.quantity,
+        priceAtPurchase: schema.orderItems.priceAtPurchase,
+        productName: schema.products.name,
+        productImageUrl: schema.products.imageUrl,
+      })
+      .from(schema.orderItems)
+      .leftJoin(
+        schema.products,
+        eq(schema.orderItems.productId, schema.products.id),
+      )
+      .where(inArray(schema.orderItems.orderId, orderIds));
+
+    const itemsByOrder = new Map<number, typeof itemRows>();
+    for (const row of itemRows) {
+      if (!itemsByOrder.has(row.orderId)) itemsByOrder.set(row.orderId, []);
+      itemsByOrder.get(row.orderId)!.push(row);
+    }
+
+    return orders.map((o) => ({
+      ...o,
+      items: itemsByOrder.get(o.id) ?? [],
+    }));
   }
 
   async findSupplierOrders(supplierId: number) {
@@ -420,7 +451,7 @@ export class OrdersService {
       return { available: false as const, reason: 'courier-offline' };
     }
 
-    let routes;
+    let routes: OptimizedRoute[];
     try {
       routes = await this.routingService.getOptimizedRoute(order.courierId);
     } catch {
@@ -432,7 +463,7 @@ export class OrdersService {
     );
 
     let cumulativeKm = 0;
-    let lastPos: { lat: number; lng: number } = courierLoc;
+    const lastPos: { lat: number; lng: number } = courierLoc;
     let lastActiveWp: { lat: number; lng: number } | null = null;
     let stopsAhead = 0;
 

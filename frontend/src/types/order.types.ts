@@ -12,6 +12,8 @@ export interface OrderItem {
   productId: number
   quantity: number
   priceAtPurchase: number
+  productName?: string | null
+  productImageUrl?: string | null
 }
 
 export interface Order {
@@ -27,6 +29,7 @@ export interface Order {
   deliveryFee: number
   pricingBreakdown: unknown | null
   createdAt: string | null
+  items?: OrderItem[]
 }
 
 export interface OrderWithItems extends Order {

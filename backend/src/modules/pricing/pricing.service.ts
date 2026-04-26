@@ -51,29 +51,32 @@ export class PricingService {
     const distanceKm = Math.max(0, Number(params.distanceKm.toFixed(2)));
 
     const base = PRICING_CONFIG.base;
-    const distanceFee = Math.round(PRICING_CONFIG.perKm * distanceKm);
+    const tierBreakdown = this.calculateTieredDistanceFee(distanceKm);
+    const distanceFee = tierBreakdown.totalFee;
     const subtotal = base + distanceFee;
 
     const rush = this.getRushMultiplier(at);
     const afterRush = subtotal * rush.multiplier;
 
     const load = await this.getLoadMultiplier();
+    const finalUncapped = Math.round(afterRush * load.multiplier);
     const final = this.clamp(
-      Math.round(afterRush * load.multiplier),
+      finalUncapped,
       PRICING_CONFIG.minFee,
       PRICING_CONFIG.maxFee,
     );
 
+    const sourceLabel = params.distanceSource ?? 'haversine';
     const items: PricingBreakdownItem[] = [
       { label: 'Base fee', amount: base },
-      {
-        label: 'Distance',
-        amount: distanceFee,
-        detail:
-          `${distanceKm.toFixed(2)} km × ${PRICING_CONFIG.perKm} ₴/km` +
-          ` (${params.distanceSource ?? 'haversine'})`,
-      },
     ];
+    for (const seg of tierBreakdown.segments) {
+      items.push({
+        label: seg.tierLabel,
+        amount: seg.fee,
+        detail: `${seg.km.toFixed(2)} km × ${seg.perKm} ₴/km (${sourceLabel})`,
+      });
+    }
     if (rush.multiplier !== 1) {
       items.push({
         label: rush.label ?? 'Rush hour',
@@ -84,8 +87,21 @@ export class PricingService {
     if (load.multiplier !== 1) {
       items.push({
         label: 'High demand surge',
-        amount: Math.round(final - afterRush),
+        amount: Math.round(finalUncapped - afterRush),
         detail: `×${load.multiplier.toFixed(2)} (${load.activeOrders} orders / ${load.availableCouriers} couriers)`,
+      });
+    }
+    if (finalUncapped > PRICING_CONFIG.maxFee) {
+      items.push({
+        label: 'Max fee cap',
+        amount: final - finalUncapped,
+        detail: `Capped at ₴${PRICING_CONFIG.maxFee}`,
+      });
+    } else if (finalUncapped < PRICING_CONFIG.minFee) {
+      items.push({
+        label: 'Min fee adjustment',
+        amount: final - finalUncapped,
+        detail: `Raised to ₴${PRICING_CONFIG.minFee}`,
       });
     }
 
@@ -105,6 +121,40 @@ export class PricingService {
       finalFee: final,
       items,
     };
+  }
+
+  private calculateTieredDistanceFee(distanceKm: number): {
+    totalFee: number;
+    segments: { tierLabel: string; km: number; perKm: number; fee: number }[];
+  } {
+    let remaining = distanceKm;
+    let prevBoundary = 0;
+    const segments: {
+      tierLabel: string;
+      km: number;
+      perKm: number;
+      fee: number;
+    }[] = [];
+
+    for (const tier of PRICING_CONFIG.distanceTiers) {
+      if (remaining <= 0) break;
+      const tierWidth = tier.upToKm - prevBoundary;
+      const kmInTier = Math.min(remaining, tierWidth);
+      if (kmInTier > 0) {
+        const fee = Math.round(kmInTier * tier.perKm);
+        segments.push({
+          tierLabel: tier.label,
+          km: kmInTier,
+          perKm: tier.perKm,
+          fee,
+        });
+        remaining -= kmInTier;
+      }
+      prevBoundary = tier.upToKm;
+    }
+
+    const totalFee = segments.reduce((acc, s) => acc + s.fee, 0);
+    return { totalFee, segments };
   }
 
   private getRushMultiplier(at: Date): {

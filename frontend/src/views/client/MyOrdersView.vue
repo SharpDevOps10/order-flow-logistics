@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, reactive } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useOrdersStore } from '@/stores/orders.store'
 import { useOrganizationsStore } from '@/stores/organizations.store'
@@ -9,12 +9,13 @@ import type { Order } from '@/types/order.types'
 import type { OrderReview, CourierRatingStats } from '@/types/review.types'
 import { OrdersApi, type OrderEtaResponse } from '@/api/orders.api'
 import { ReviewsApi } from '@/api/reviews.api'
-import AppBadge from '@/components/common/AppBadge.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppSpinner from '@/components/common/AppSpinner.vue'
 import AppModal from '@/components/common/AppModal.vue'
 import OrderRouteMap from '@/components/map/OrderRouteMap.vue'
 import StarRating from '@/components/common/StarRating.vue'
+
+const UNDO_DURATION = 5000
 
 const store = useOrdersStore()
 const orgsStore = useOrganizationsStore()
@@ -22,12 +23,21 @@ const router = useRouter()
 const toast = useToast()
 
 const expandedRoutes = ref<Set<number>>(new Set())
+const expandedItems = ref<Set<number>>(new Set())
 
 const toggleRoute = (orderId: number) => {
   if (expandedRoutes.value.has(orderId)) {
     expandedRoutes.value.delete(orderId)
   } else {
     expandedRoutes.value.add(orderId)
+  }
+}
+
+const toggleItems = (orderId: number) => {
+  if (expandedItems.value.has(orderId)) {
+    expandedItems.value.delete(orderId)
+  } else {
+    expandedItems.value.add(orderId)
   }
 }
 
@@ -41,56 +51,159 @@ const canShowRoute = (order: Order): boolean => {
   return !!(org?.lat && org?.lng)
 }
 
-type BadgeVariant = 'yellow' | 'blue' | 'green' | 'default' | 'purple'
+const isCourierEnRoute = (order: Order): boolean =>
+  order.courierId !== null &&
+  (order.status === OrderStatus.PickedUp ||
+    order.status === OrderStatus.ReadyForDelivery)
 
-const statusBadgeVariant: Record<OrderStatus, BadgeVariant> = {
-  [OrderStatus.Pending]: 'yellow',
-  [OrderStatus.Accepted]: 'blue',
-  [OrderStatus.ReadyForDelivery]: 'green',
-  [OrderStatus.PickedUp]: 'purple',
-  [OrderStatus.Delivered]: 'default',
-}
+const STATUS_FLOW: OrderStatus[] = [
+  OrderStatus.Pending,
+  OrderStatus.Accepted,
+  OrderStatus.ReadyForDelivery,
+  OrderStatus.PickedUp,
+  OrderStatus.Delivered,
+]
 
 const statusLabel: Record<OrderStatus, string> = {
   [OrderStatus.Pending]: 'Pending',
   [OrderStatus.Accepted]: 'Accepted',
-  [OrderStatus.ReadyForDelivery]: 'Ready for Delivery',
-  [OrderStatus.PickedUp]: 'Picked Up',
+  [OrderStatus.ReadyForDelivery]: 'Ready',
+  [OrderStatus.PickedUp]: 'In delivery',
   [OrderStatus.Delivered]: 'Delivered',
 }
 
-const formatDate = (dateStr: string | null): string => {
+const stepIndex = (status: OrderStatus) => STATUS_FLOW.indexOf(status)
+
+const currencyFormatter = new Intl.NumberFormat('uk-UA', {
+  style: 'currency',
+  currency: 'UAH',
+  minimumFractionDigits: 2,
+})
+const formatPrice = (value: number) => currencyFormatter.format(value)
+
+const formatDateTime = (dateStr: string | null): string => {
   if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleDateString('en-GB', {
+  return new Date(dateStr).toLocaleString('en-GB', {
     day: '2-digit',
-    month: '2-digit',
+    month: 'short',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   })
 }
 
-const isCancelModalOpen = ref(false)
-const selectedOrder = ref<Order | null>(null)
-const isCancelling = ref(false)
-
-const openCancelModal = (order: Order) => {
-  selectedOrder.value = order
-  isCancelModalOpen.value = true
+const formatRelative = (dateStr: string | null): string => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const diffMs = Date.now() - date.getTime()
+  const sec = Math.floor(diffMs / 1000)
+  if (sec < 60) return 'just now'
+  const min = Math.floor(sec / 60)
+  if (min < 60) return `${min} min ago`
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return `${hr}h ago`
+  const day = Math.floor(hr / 24)
+  if (day < 7) return `${day}d ago`
+  return formatDateTime(dateStr)
 }
 
-const handleCancel = async () => {
-  if (!selectedOrder.value) return
-  isCancelling.value = true
+const reviewOrder = ref<Order | null>(null)
+const isReviewModalOpen = ref(false)
+const isSubmittingReview = ref(false)
+const reviewForm = reactive({
+  courierRating: 0,
+  speedRating: 0,
+  comment: '',
+})
+
+const openReviewModal = (order: Order) => {
+  reviewOrder.value = order
+  reviewForm.courierRating = 0
+  reviewForm.speedRating = 0
+  reviewForm.comment = ''
+  isReviewModalOpen.value = true
+}
+
+const handleSubmitReview = async () => {
+  if (!reviewOrder.value) return
+  if (!reviewForm.courierRating || !reviewForm.speedRating) {
+    toast.error('Please rate both courier and speed')
+    return
+  }
+  isSubmittingReview.value = true
   try {
-    await store.cancel(selectedOrder.value.id)
-    toast.success(`Order #${selectedOrder.value.id} cancelled`)
-    isCancelModalOpen.value = false
+    const review = await ReviewsApi.create({
+      orderId: reviewOrder.value.id,
+      courierRating: reviewForm.courierRating,
+      speedRating: reviewForm.speedRating,
+      comment: reviewForm.comment.trim() || undefined,
+    })
+    reviews.value.set(review.orderId, review)
+    if (reviewOrder.value.courierId) {
+      const stats = await ReviewsApi.getCourierStats(reviewOrder.value.courierId)
+      courierStats.value.set(reviewOrder.value.courierId, stats)
+    }
+    toast.success('Thanks for your feedback!')
+    isReviewModalOpen.value = false
+  } catch (e) {
+    const msg =
+      (e as { response?: { data?: { message?: string } } }).response?.data
+        ?.message ?? 'Failed to submit review'
+    toast.error(msg)
+  } finally {
+    isSubmittingReview.value = false
+  }
+}
+
+interface PendingCancel {
+  order: Order
+  index: number
+  timerId: ReturnType<typeof setTimeout>
+}
+let pendingCancel: PendingCancel | null = null
+
+const flushPendingCancel = async () => {
+  if (!pendingCancel) return
+  const { order, timerId } = pendingCancel
+  clearTimeout(timerId)
+  pendingCancel = null
+  try {
+    await store.cancelOnServer(order.id)
   } catch {
     toast.error(store.error ?? 'Failed to cancel order')
-  } finally {
-    isCancelling.value = false
+    await store.fetchMy()
   }
+}
+
+const handleCancel = (order: Order) => {
+  if (pendingCancel) void flushPendingCancel()
+
+  const removed = store.removeLocal(order.id)
+  if (!removed) return
+
+  const undo = () => {
+    if (!pendingCancel || pendingCancel.order.id !== order.id) return
+    clearTimeout(pendingCancel.timerId)
+    store.restoreLocal(pendingCancel.order, pendingCancel.index)
+    pendingCancel = null
+  }
+
+  const timerId = setTimeout(() => {
+    if (!pendingCancel || pendingCancel.order.id !== order.id) return
+    const target = pendingCancel
+    pendingCancel = null
+    store.cancelOnServer(target.order.id).catch(() => {
+      toast.error(store.error ?? 'Failed to cancel order')
+      store.restoreLocal(target.order, target.index)
+    })
+  }, UNDO_DURATION)
+
+  toast.success(`Order #${order.id} cancelled`, {
+    duration: UNDO_DURATION,
+    action: { label: 'Undo', onClick: undo },
+  })
+
+  pendingCancel = { order: removed.order, index: removed.index, timerId }
 }
 
 const etas = ref<Map<number, OrderEtaResponse>>(new Map())
@@ -175,53 +288,19 @@ const fetchReviewsAndStats = async () => {
   courierStats.value = nextStats
 }
 
-const isReviewModalOpen = ref(false)
-const reviewOrder = ref<Order | null>(null)
-const isSubmittingReview = ref(false)
-const reviewForm = reactive({
-  courierRating: 0,
-  speedRating: 0,
-  comment: '',
-})
-
-const openReviewModal = (order: Order) => {
-  reviewOrder.value = order
-  reviewForm.courierRating = 0
-  reviewForm.speedRating = 0
-  reviewForm.comment = ''
-  isReviewModalOpen.value = true
+const orderTitle = (order: Order): string => {
+  const org = getOrgForOrder(order)
+  return org?.name ?? `Order #${order.id}`
 }
 
-const handleSubmitReview = async () => {
-  if (!reviewOrder.value) return
-  if (!reviewForm.courierRating || !reviewForm.speedRating) {
-    toast.error('Please rate both courier and speed')
-    return
-  }
-  isSubmittingReview.value = true
-  try {
-    const review = await ReviewsApi.create({
-      orderId: reviewOrder.value.id,
-      courierRating: reviewForm.courierRating,
-      speedRating: reviewForm.speedRating,
-      comment: reviewForm.comment.trim() || undefined,
-    })
-    reviews.value.set(review.orderId, review)
-    if (reviewOrder.value.courierId) {
-      const stats = await ReviewsApi.getCourierStats(reviewOrder.value.courierId)
-      courierStats.value.set(reviewOrder.value.courierId, stats)
-    }
-    toast.success('Thanks for your feedback!')
-    isReviewModalOpen.value = false
-  } catch (e) {
-    const msg =
-      (e as { response?: { data?: { message?: string } } }).response?.data
-        ?.message ?? 'Failed to submit review'
-    toast.error(msg)
-  } finally {
-    isSubmittingReview.value = false
-  }
+const totalItemCount = (order: Order): number => {
+  return (order.items ?? []).reduce((sum, i) => sum + i.quantity, 0)
 }
+
+const orderCount = computed(() => store.orders.length)
+const orderCountLabel = computed(() =>
+  orderCount.value === 1 ? '1 order' : `${orderCount.value} orders`,
+)
 
 onMounted(async () => {
   await Promise.all([store.fetchMy(), orgsStore.fetchAll()])
@@ -232,13 +311,13 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   if (etaTimer) clearInterval(etaTimer)
+  void flushPendingCancel()
 })
 </script>
 
 <template>
   <div>
-
-        <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-3xl font-bold text-gray-900">My Orders</h1>
         <p class="text-sm text-gray-400 mt-1">Track your order history</p>
@@ -248,7 +327,7 @@ onBeforeUnmount(() => {
           v-if="!store.loading && store.orders.length"
           class="text-sm bg-blue-50 text-blue-700 border border-blue-100 px-3 py-1 rounded-full font-medium"
         >
-          {{ store.orders.length }} orders
+          {{ orderCountLabel }}
         </span>
         <AppButton variant="secondary" size="sm" @click="router.push({ name: 'marketplace' })">
           + New order
@@ -256,11 +335,11 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-        <div v-if="store.loading" class="flex items-center justify-center py-20">
+    <div v-if="store.loading" class="flex items-center justify-center py-20">
       <AppSpinner size="lg" />
     </div>
 
-        <div
+    <div
       v-else-if="store.error"
       class="bg-red-50 border border-red-100 rounded-2xl p-6 text-center"
     >
@@ -270,44 +349,131 @@ onBeforeUnmount(() => {
       </AppButton>
     </div>
 
-        <div v-else-if="!store.orders.length" class="text-center py-20">
+    <div v-else-if="!store.orders.length" class="text-center py-20">
       <p class="text-4xl mb-3">📦</p>
       <p class="text-base font-semibold text-gray-900 mb-1">No orders yet</p>
       <p class="text-sm text-gray-400 mb-6">Browse the marketplace and place your first order</p>
       <AppButton @click="router.push({ name: 'marketplace' })">Go to Marketplace</AppButton>
     </div>
 
-        <div v-else class="flex flex-col gap-4">
-      <div
+    <div v-else class="flex flex-col gap-4">
+      <article
         v-for="order in store.orders"
         :key="order.id"
         class="bg-white border border-gray-100 rounded-2xl p-5 flex flex-col gap-4"
       >
-
-                <div class="flex items-start justify-between gap-3">
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="text-base font-semibold text-gray-900">Order #{{ order.id }}</span>
-              <AppBadge :variant="statusBadgeVariant[order.status]">
-                {{ statusLabel[order.status] }}
-              </AppBadge>
-            </div>
-            <p class="text-xs text-gray-400 mt-1">{{ formatDate(order.createdAt) }}</p>
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0 flex-1">
+            <h2 class="text-lg font-bold text-gray-900 truncate">
+              {{ orderTitle(order) }}
+            </h2>
+            <p class="text-xs text-gray-400 mt-0.5 flex items-center gap-1.5">
+              <span>Order #{{ order.id }}</span>
+              <span class="text-gray-300">·</span>
+              <span :title="formatDateTime(order.createdAt)">
+                {{ formatRelative(order.createdAt) }}
+              </span>
+            </p>
           </div>
           <div class="flex-shrink-0 text-right">
-            <p class="text-lg font-bold text-gray-900">
-              ₴{{ (order.totalAmount + order.deliveryFee).toFixed(2) }}
+            <p class="text-2xl font-bold text-blue-600 whitespace-nowrap">
+              {{ formatPrice(order.totalAmount + order.deliveryFee) }}
             </p>
             <p v-if="order.deliveryFee > 0" class="text-xs text-gray-400 mt-0.5">
-              incl. ₴{{ order.deliveryFee }} delivery
+              incl. {{ formatPrice(order.deliveryFee) }} delivery
             </p>
           </div>
         </div>
 
-                <div class="grid grid-cols-2 gap-3 text-sm">
+        <div
+          v-if="order.status !== OrderStatus.Delivered"
+          class="flex items-center gap-1"
+        >
+          <template v-for="(s, i) in STATUS_FLOW" :key="s">
+            <div class="flex flex-col items-center gap-1 flex-1">
+              <div
+                class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-semibold transition-colors"
+                :class="
+                  i < stepIndex(order.status)
+                    ? 'bg-blue-600 text-white'
+                    : i === stepIndex(order.status)
+                      ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-500 ring-offset-2'
+                      : 'bg-gray-100 text-gray-400'
+                "
+              >
+                <svg v-if="i < stepIndex(order.status)" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+                <template v-else>{{ i + 1 }}</template>
+              </div>
+              <span
+                class="text-[10px] font-medium text-center leading-tight"
+                :class="i <= stepIndex(order.status) ? 'text-gray-700' : 'text-gray-400'"
+              >
+                {{ statusLabel[s] }}
+              </span>
+            </div>
+            <div
+              v-if="i < STATUS_FLOW.length - 1"
+              class="flex-1 h-0.5 -mt-4 transition-colors"
+              :class="i < stepIndex(order.status) ? 'bg-blue-600' : 'bg-gray-200'"
+            />
+          </template>
+        </div>
+
+        <div
+          v-else
+          class="flex items-center gap-2 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-2.5"
+        >
+          <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          <p class="text-sm font-semibold text-emerald-800">Delivered</p>
+        </div>
+
+        <div v-if="order.items && order.items.length" class="bg-gray-50 rounded-xl px-4 py-3">
+          <button
+            class="flex items-center justify-between w-full text-left"
+            @click="toggleItems(order.id)"
+          >
+            <div class="flex items-center gap-2">
+              <svg
+                class="w-3.5 h-3.5 text-gray-400 transition-transform duration-200"
+                :class="expandedItems.has(order.id) ? 'rotate-90' : ''"
+                fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+              <p class="text-sm font-medium text-gray-700">
+                {{ totalItemCount(order) }} {{ totalItemCount(order) === 1 ? 'item' : 'items' }}
+              </p>
+            </div>
+            <p class="text-xs text-gray-500">
+              {{ expandedItems.has(order.id) ? 'Hide' : 'Show items' }}
+            </p>
+          </button>
+
+          <ul v-if="expandedItems.has(order.id)" class="mt-3 flex flex-col gap-2 pt-3 border-t border-gray-200">
+            <li v-for="item in order.items" :key="item.id" class="flex items-center gap-3 text-sm">
+              <span class="inline-flex items-center justify-center w-6 h-6 rounded-md bg-white border border-gray-200 text-xs font-semibold text-gray-600 flex-shrink-0">
+                {{ item.quantity }}
+              </span>
+              <span class="flex-1 truncate text-gray-700">
+                {{ item.productName ?? `Product #${item.productId}` }}
+              </span>
+              <span class="text-gray-500 whitespace-nowrap">
+                {{ formatPrice(item.priceAtPurchase * item.quantity) }}
+              </span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
           <div class="bg-gray-50 rounded-xl px-4 py-3">
             <p class="text-xs text-gray-400 mb-1">Delivery address</p>
-            <p class="text-gray-700 font-medium truncate">{{ order.deliveryAddress }}</p>
+            <p class="text-gray-700 font-medium truncate" :title="order.deliveryAddress">
+              {{ order.deliveryAddress }}
+            </p>
           </div>
           <div class="bg-gray-50 rounded-xl px-4 py-3">
             <p class="text-xs text-gray-400 mb-1">Courier</p>
@@ -354,7 +520,7 @@ onBeforeUnmount(() => {
           </template>
         </div>
 
-                <div v-if="canShowRoute(order)">
+        <div v-if="isCourierEnRoute(order) && canShowRoute(order)">
           <button
             class="flex items-center gap-1.5 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors"
             @click="toggleRoute(order.id)"
@@ -381,16 +547,19 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-                <div
+        <div
           v-if="order.status === OrderStatus.Pending"
           class="flex justify-end pt-1 border-t border-gray-50"
         >
-          <AppButton variant="danger" size="sm" @click="openCancelModal(order)">
+          <button
+            class="text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+            @click="handleCancel(order)"
+          >
             Cancel order
-          </AppButton>
+          </button>
         </div>
 
-                <div
+        <div
           v-if="order.status === OrderStatus.Delivered"
           class="pt-1 border-t border-gray-50"
         >
@@ -401,7 +570,7 @@ onBeforeUnmount(() => {
             <div class="flex items-center justify-between">
               <span class="text-xs text-gray-500 font-medium">Your review</span>
               <span class="text-xs text-gray-400">
-                {{ formatDate(reviews.get(order.id)!.createdAt) }}
+                {{ formatDateTime(reviews.get(order.id)!.createdAt) }}
               </span>
             </div>
             <div class="grid grid-cols-2 gap-3">
@@ -427,30 +596,8 @@ onBeforeUnmount(() => {
             </AppButton>
           </div>
         </div>
-
-      </div>
+      </article>
     </div>
-
-        <AppModal v-model="isCancelModalOpen" title="Cancel order">
-      <div class="flex flex-col gap-3">
-        <p class="text-sm text-gray-600">
-          Are you sure you want to cancel
-          <span class="font-semibold text-gray-900">Order #{{ selectedOrder?.id }}</span>?
-        </p>
-        <div class="bg-yellow-50 border border-yellow-100 rounded-xl px-4 py-3">
-          <p class="text-xs text-yellow-700">
-            This action cannot be undone. The order will be permanently removed.
-          </p>
-        </div>
-      </div>
-
-      <template #footer>
-        <AppButton variant="secondary" @click="isCancelModalOpen = false">Keep order</AppButton>
-        <AppButton variant="danger" :loading="isCancelling" @click="handleCancel">
-          Yes, cancel
-        </AppButton>
-      </template>
-    </AppModal>
 
     <AppModal v-model="isReviewModalOpen" title="Rate your delivery">
       <div class="flex flex-col gap-5">
@@ -491,6 +638,5 @@ onBeforeUnmount(() => {
         </AppButton>
       </template>
     </AppModal>
-
   </div>
 </template>

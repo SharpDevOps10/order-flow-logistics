@@ -114,6 +114,27 @@ export const useOrdersStore = defineStore('orders', () => {
     }
   }
 
+  const removeLocal = (id: number): { order: Order; index: number } | null => {
+    const index = orders.value.findIndex((o) => o.id === id)
+    if (index === -1) return null
+    const [order] = orders.value.splice(index, 1)
+    return { order, index }
+  }
+
+  const restoreLocal = (order: Order, index: number) => {
+    orders.value.splice(index, 0, order)
+  }
+
+  const cancelOnServer = async (id: number) => {
+    error.value = null
+    try {
+      await OrdersApi.cancel(id)
+    } catch (e: unknown) {
+      error.value = extractErrorMessage(e)
+      throw e
+    }
+  }
+
   return {
     orders,
     loading,
@@ -125,5 +146,8 @@ export const useOrdersStore = defineStore('orders', () => {
     updateStatus,
     assignCourier,
     cancel,
+    removeLocal,
+    restoreLocal,
+    cancelOnServer,
   }
 })
