@@ -65,6 +65,7 @@ interface DragState {
   slot: Slot
   initialClientY: number
   initialClientX: number
+  initialCursorMin: number
   initialDay: number
   initialStart: number
   initialEnd: number
@@ -96,7 +97,7 @@ const getMinuteFromEvent = (e: MouseEvent): number => {
   const grid = calendarRef.value
   if (!grid) return 0
   const rect = grid.getBoundingClientRect()
-  const y = e.clientY - rect.top
+  const y = e.clientY - rect.top + grid.scrollTop
   return clamp(snapMin(y / PIXELS_PER_MIN), 0, 1440)
 }
 
@@ -139,6 +140,7 @@ const startCreate = (dayIndex: number, e: MouseEvent) => {
     slot: newSlot,
     initialClientY: e.clientY,
     initialClientX: e.clientX,
+    initialCursorMin: startMin,
     initialDay: dayIndex,
     initialStart: start,
     initialEnd: start + MIN_DURATION,
@@ -171,6 +173,7 @@ const startMove = (slot: Slot, e: MouseEvent) => {
     slot,
     initialClientY: e.clientY,
     initialClientX: e.clientX,
+    initialCursorMin: getMinuteFromEvent(e),
     initialDay: slot.dayOfWeek,
     initialStart: slot.startMinute,
     initialEnd: slot.endMinute,
@@ -192,6 +195,7 @@ const startResize = (
     slot,
     initialClientY: e.clientY,
     initialClientX: e.clientX,
+    initialCursorMin: getMinuteFromEvent(e),
     initialDay: slot.dayOfWeek,
     initialStart: slot.startMinute,
     initialEnd: slot.endMinute,
@@ -210,16 +214,7 @@ const onMouseMove = (e: MouseEvent) => {
   }
 
   const cursorMin = getMinuteFromEvent(e)
-  const initialCursorMin = clamp(
-    snapMin(
-      (dragState.initialClientY -
-        (calendarRef.value?.getBoundingClientRect().top ?? 0)) /
-        PIXELS_PER_MIN,
-    ),
-    0,
-    1440,
-  )
-  const deltaMin = cursorMin - initialCursorMin
+  const deltaMin = cursorMin - dragState.initialCursorMin
 
   if (dragState.type === 'create') {
     const gap = findGap(
