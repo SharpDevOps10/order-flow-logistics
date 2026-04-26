@@ -285,5 +285,16 @@ export const useClientOrderEtas = (orders: Ref<Order[]>) => {
     return result
   })
 
-  return { etaByOrder }
+  const courierPosByOrder = computed<Map<number, LatLng>>(() => {
+    const result = new Map<number, LatLng>()
+    for (const [orderId, ctx] of contexts.value) {
+      if (!ctx.available) continue
+      const live = livePositions.value.get(orderId)
+      const pos = live ?? ctx.courierPos ?? null
+      if (pos) result.set(orderId, { lat: pos.lat, lng: pos.lng })
+    }
+    return result
+  })
+
+  return { etaByOrder, contexts, courierPosByOrder }
 }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 import L from 'leaflet'
+import type { OptimizedRoute } from '@/types/routing.types'
 
 const props = defineProps<{
   pickupLat: number
@@ -9,10 +10,15 @@ const props = defineProps<{
   deliveryLat: number
   deliveryLng: number
   deliveryLabel: string
+  orderId?: number
+  route?: OptimizedRoute | null
+  courierPos?: { lat: number; lng: number } | null
 }>()
 
 const mapEl = ref<HTMLElement | null>(null)
 let map: L.Map | null = null
+let layerGroup: L.LayerGroup | null = null
+let courierMarker: L.Marker | null = null
 
 function makePickupIcon() {
   return L.divIcon({
@@ -52,6 +58,107 @@ function makeDeliveryIcon() {
   })
 }
 
+function makeCourierIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="position:relative;width:22px;height:22px">
+      <span style="
+        position:absolute;inset:0;border-radius:50%;
+        background:#2563eb;opacity:0.25;
+        animation:courier-pulse 1.6s ease-out infinite;
+      "></span>
+      <span style="
+        position:absolute;inset:4px;border-radius:50%;
+        background:#2563eb;border:2px solid #fff;
+        box-shadow:0 2px 6px rgba(0,0,0,0.35);
+      "></span>
+    </div>
+    <style>@keyframes courier-pulse{0%{transform:scale(0.8);opacity:0.5}100%{transform:scale(1.8);opacity:0}}</style>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  })
+}
+
+function findOwnDeliveryIndex(route: OptimizedRoute, orderId: number): number {
+  return route.waypoints.findIndex(
+    (wp) => wp.type === 'DELIVERY' && wp.orderId === orderId,
+  )
+}
+
+function renderRoute() {
+  if (!map || !layerGroup) return
+  layerGroup.clearLayers()
+
+  const pickup = L.latLng(props.pickupLat, props.pickupLng)
+  const delivery = L.latLng(props.deliveryLat, props.deliveryLng)
+
+  L.marker(pickup, { icon: makePickupIcon() })
+    .bindPopup(`<b>Pickup</b><br>${props.pickupLabel}`)
+    .addTo(layerGroup)
+
+  L.marker(delivery, { icon: makeDeliveryIcon() })
+    .bindPopup(`<b>Delivery</b><br>${props.deliveryLabel}`)
+    .addTo(layerGroup)
+
+  const allLatLngs: L.LatLng[] = [pickup, delivery]
+
+  const route = props.route
+  const orderId = props.orderId
+  let realGeometryRendered = false
+
+  if (route && orderId !== undefined && route.geometry && route.geometry.length > 0) {
+    const targetIdx = findOwnDeliveryIndex(route, orderId)
+    if (targetIdx > 0) {
+      const segments = route.geometry.slice(0, targetIdx)
+      const firstActiveIdx = route.waypoints.findIndex((wp) => !wp.completed)
+      const firstActive = route.waypoints[firstActiveIdx]
+      const beforeOwnDelivery = firstActive && firstActive.type === 'PICKUP' && props.courierPos
+
+      if (beforeOwnDelivery) {
+        L.polyline(
+          [
+            L.latLng(props.courierPos!.lat, props.courierPos!.lng),
+            L.latLng(firstActive.lat, firstActive.lng),
+          ],
+          { color: '#2563eb', weight: 3, opacity: 0.6, dashArray: '8 6' },
+        ).addTo(layerGroup)
+        allLatLngs.push(L.latLng(props.courierPos!.lat, props.courierPos!.lng))
+      }
+
+      for (const segment of segments) {
+        if (segment.length < 2) continue
+        const coords = segment.map(([lat, lng]) => L.latLng(lat, lng))
+        L.polyline(coords, {
+          color: '#2563eb',
+          weight: 4,
+          opacity: 0.85,
+        }).addTo(layerGroup)
+        for (const c of coords) allLatLngs.push(c)
+      }
+      realGeometryRendered = true
+    }
+  }
+
+  if (!realGeometryRendered) {
+    L.polyline([pickup, delivery], {
+      color: '#3b82f6',
+      weight: 3,
+      opacity: 0.7,
+      dashArray: '8 6',
+    }).addTo(layerGroup)
+  }
+
+  if (props.courierPos) {
+    const ll = L.latLng(props.courierPos.lat, props.courierPos.lng)
+    courierMarker = L.marker(ll, { icon: makeCourierIcon(), zIndexOffset: 1000 }).addTo(map)
+    allLatLngs.push(ll)
+  } else {
+    courierMarker = null
+  }
+
+  map.fitBounds(L.latLngBounds(allLatLngs), { padding: [40, 40] })
+}
+
 onMounted(() => {
   if (!mapEl.value) return
 
@@ -62,31 +169,43 @@ onMounted(() => {
     maxZoom: 18,
   }).addTo(map)
 
-  const pickup = L.latLng(props.pickupLat, props.pickupLng)
-  const delivery = L.latLng(props.deliveryLat, props.deliveryLng)
-
-  L.marker(pickup, { icon: makePickupIcon() })
-    .bindPopup(`<b>Pickup</b><br>${props.pickupLabel}`)
-    .addTo(map)
-
-  L.marker(delivery, { icon: makeDeliveryIcon() })
-    .bindPopup(`<b>Delivery</b><br>${props.deliveryLabel}`)
-    .addTo(map)
-
-  L.polyline([pickup, delivery], {
-    color: '#3b82f6',
-    weight: 3,
-    opacity: 0.7,
-    dashArray: '8 6',
-  }).addTo(map)
-
-  map.fitBounds(L.latLngBounds([pickup, delivery]), { padding: [40, 40] })
+  layerGroup = L.layerGroup().addTo(map)
+  renderRoute()
 })
 
 onUnmounted(() => {
   map?.remove()
   map = null
+  layerGroup = null
+  courierMarker = null
 })
+
+watch(
+  () => [props.route, props.orderId],
+  () => renderRoute(),
+  { deep: true },
+)
+
+watch(
+  () => props.courierPos,
+  (pos) => {
+    if (!map) return
+    if (!pos) {
+      if (courierMarker) {
+        courierMarker.remove()
+        courierMarker = null
+      }
+      return
+    }
+    const ll = L.latLng(pos.lat, pos.lng)
+    if (!courierMarker) {
+      courierMarker = L.marker(ll, { icon: makeCourierIcon(), zIndexOffset: 1000 }).addTo(map)
+    } else {
+      courierMarker.setLatLng(ll)
+    }
+  },
+  { deep: true },
+)
 </script>
 
 <template>

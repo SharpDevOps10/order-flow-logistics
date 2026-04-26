@@ -24,7 +24,17 @@ const router = useRouter()
 const toast = useToast()
 
 useOrderRealtime()
-const { etaByOrder } = useClientOrderEtas(computed(() => store.orders))
+const { etaByOrder, contexts: etaContexts, courierPosByOrder } = useClientOrderEtas(computed(() => store.orders))
+
+const getRouteForOrder = (orderId: number) => {
+  const ctx = etaContexts.value.get(orderId)
+  if (!ctx || !ctx.available) return null
+  return (
+    ctx.routes.find((r) =>
+      r.waypoints.some((wp) => wp.type === 'DELIVERY' && wp.orderId === orderId),
+    ) ?? null
+  )
+}
 
 const expandedRoutes = ref<Set<number>>(new Set())
 const expandedItems = ref<Set<number>>(new Set())
@@ -536,6 +546,9 @@ onBeforeUnmount(() => {
               :delivery-lat="Number(order.lat)"
               :delivery-lng="Number(order.lng)"
               :delivery-label="order.deliveryAddress"
+              :order-id="order.id"
+              :route="getRouteForOrder(order.id)"
+              :courier-pos="courierPosByOrder.get(order.id) ?? null"
             />
           </div>
         </div>
