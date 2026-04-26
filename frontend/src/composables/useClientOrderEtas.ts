@@ -219,13 +219,21 @@ export const useClientOrderEtas = (orders: Ref<Order[]>) => {
           let segKm: number
           let segSec: number | null = null
           if (firstActive) {
-            if (
-              !firstSegmentSeen &&
-              livePos?.firstSegmentKm !== undefined &&
-              lastActiveWp === null
-            ) {
-              segKm = livePos.firstSegmentKm
-              segSec = livePos.firstSegmentDurationSec ?? null
+            if (!firstSegmentSeen && lastActiveWp === null) {
+              const liveKm = livePos?.firstSegmentKm
+              const liveSec = livePos?.firstSegmentDurationSec
+              const ctxKm = ctx.firstSegmentKm
+              const ctxSec = ctx.firstSegmentDurationSec
+              if (liveKm !== undefined) {
+                segKm = liveKm
+                segSec = liveSec ?? null
+              } else if (ctxKm !== null && ctxKm !== undefined) {
+                segKm = ctxKm
+                segSec = ctxSec ?? null
+              } else {
+                const from = lastActiveWp ?? courierPos
+                segKm = haversineKm(from, wp)
+              }
             } else {
               const from = lastActiveWp ?? courierPos
               segKm = haversineKm(from, wp)

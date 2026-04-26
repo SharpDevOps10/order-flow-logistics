@@ -17,6 +17,8 @@ export type OrderEtaContextResponse =
       routes: OptimizedRoute[]
       avgSpeedKmh: number
       isFallbackSpeed: boolean
+      firstSegmentKm: number | null
+      firstSegmentDurationSec: number | null
     }
   | {
       available: false

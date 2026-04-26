@@ -683,6 +683,32 @@ export class OrdersService {
       order.courierId,
     );
 
+    let firstSegmentKm: number | null = null;
+    let firstSegmentDurationSec: number | null = null;
+    if (courierPos) {
+      let firstWp: { lat: number; lng: number } | null = null;
+      outer: for (const route of routes) {
+        for (const wp of route.waypoints) {
+          if (!wp.completed) {
+            firstWp = { lat: wp.lat, lng: wp.lng };
+            break outer;
+          }
+        }
+      }
+      if (firstWp) {
+        try {
+          const result = await this.roadDistanceService.getDistanceKm(
+            courierPos,
+            firstWp,
+          );
+          firstSegmentKm = result.km;
+          firstSegmentDurationSec = result.durationSec;
+        } catch {
+          // ignore — frontend will fall back to haversine
+        }
+      }
+    }
+
     return {
       available: true as const,
       orderId,
@@ -691,6 +717,8 @@ export class OrdersService {
       routes,
       avgSpeedKmh: stats.avgSpeedKmh,
       isFallbackSpeed: stats.isFallback,
+      firstSegmentKm,
+      firstSegmentDurationSec,
     };
   }
 
